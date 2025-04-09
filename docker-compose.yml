@@ -1,0 +1,58 @@
+services:
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./gateway/.env
+    depends_on:
+      - oauth
+      - logging
+    restart: always
+
+  oauth:
+    build:
+      context: ./oauth
+      dockerfile: Dockerfile
+    container_name: oauth
+    ports:
+      - "8001:8000"
+    env_file:
+      - ./oauth/.env
+    restart: always
+
+  logging:
+    build:
+      context: ./logging
+      dockerfile: Dockerfile
+    container_name: logging
+    ports:
+      - "8002:8000"
+    env_file:
+      - ./logging/.env
+    restart: always
+
+  # 추가적인 서비스들 예시
+  disclosure:
+    build:
+      context: ./disclosure
+    container_name: disclosure
+    ports:
+      - "8003:8000"
+    env_file:
+      - ./disclosure/.env
+    restart: always
+
+  companies:
+    build:
+      context: ./companies
+    container_name: companies
+    ports:
+      - "8004:8000"
+    env_file:
+      - ./companies/.env
+    restart: always
