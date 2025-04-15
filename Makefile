@@ -1,124 +1,99 @@
-# HC_MSA/Makefile
-##사용예시
-# make build-oauth       # OAuth 서비스 빌드
-# make up-logging        # Logging 서비스 실행
-# make logs-gateway      # Gateway 로그 보기
-# make clean             # 전체 컨테이너 + 볼륨 정리
-
-
-
-DOCKER_COMPOSE = docker compose -f docker-compose.yml
-
-# -------------------------------
-# 🚀 Build (서비스별)
-# -------------------------------
-
-build-gateway:
-	$(DOCKER_COMPOSE) build gateway
-
-build-oauth:
-	$(DOCKER_COMPOSE) build oauth
-
-build-logging:
-	$(DOCKER_COMPOSE) build logging
-
-build-disclosure:
-	$(DOCKER_COMPOSE) build disclosure
-
-build-companies:
-	$(DOCKER_COMPOSE) build companies
-
-build-roles:
-	$(DOCKER_COMPOSE) build roles
-
-build-audit:
-	$(DOCKER_COMPOSE) build audit
-
-build-chatbot:
-	$(DOCKER_COMPOSE) build chatbot
-
-build-esg:
-	$(DOCKER_COMPOSE) build esg
-
-build-all:
-	$(DOCKER_COMPOSE) build
-
-# -------------------------------
-# 🔼 Up (서비스 실행)
-# -------------------------------
-
-up-gateway:
-	$(DOCKER_COMPOSE) up gateway
-
-up-oauth:
-	$(DOCKER_COMPOSE) up oauth
-
-up-logging:
-	$(DOCKER_COMPOSE) up logging
-
-up-disclosure:
-	$(DOCKER_COMPOSE) up disclosure
-
-up-companies:
-	$(DOCKER_COMPOSE) up companies
-
-up-roles:
-	$(DOCKER_COMPOSE) up roles
-
-up-audit:
-	$(DOCKER_COMPOSE) up audit
-
-up-chatbot:
-	$(DOCKER_COMPOSE) up chatbot
-
-up-esg:
-	$(DOCKER_COMPOSE) up esg
-
-up-all:
-	$(DOCKER_COMPOSE) up
-
-# -------------------------------
-# 🔻 Down (모든 서비스 중지)
-# -------------------------------
+# 모든 명령어 앞에 'make' 를 붙여서 실행해야 함
+# 🔧 공통 명령어
+up:
+	docker-compose up -d --build
 
 down:
-	$(DOCKER_COMPOSE) down
+	docker-compose down
 
-# -------------------------------
-# 🔁 Restart (서비스별)
-# -------------------------------
+logs:
+	docker-compose logs -f
 
-restart-gateway:
-	$(DOCKER_COMPOSE) restart gateway
+restart:
+	docker-compose down && docker-compose up -d --build
 
-restart-oauth:
-	$(DOCKER_COMPOSE) restart oauth
+ps:
+	docker-compose ps
 
-restart-logging:
-	$(DOCKER_COMPOSE) restart logging
 
-restart-all:
-	$(DOCKER_COMPOSE) restart
+# 🚀 마이크로서비스별 명령어
 
-# -------------------------------
-# 📋 Logs (서비스별)
-# -------------------------------
+## gateway
+build-gateway:
+	docker-compose build gateway
+
+up-gateway:
+	docker-compose up -d gateway
+
+down-gateway:
+	docker-compose stop gateway
 
 logs-gateway:
-	$(DOCKER_COMPOSE) logs -f gateway
+	docker-compose logs -f gateway
 
-logs-oauth:
-	$(DOCKER_COMPOSE) logs -f oauth
+restart-gateway:
+	docker-compose stop gateway && docker-compose up -d gateway
 
-logs-logging:
-	$(DOCKER_COMPOSE) logs -f logging
+## user
+build-user:
+	docker-compose build user
 
-logs-all:
-	$(DOCKER_COMPOSE) logs -f
+up-user:
+	docker-compose up -d user
 
-# -------------------------------
-# 🧼 Clean (volume 포함 삭제)
-# -------------------------------
+down-user:
+	docker-compose stop user
 
-clean:
-	$(DOCKER_COMPOSE) down -v --remove-orphans
+logs-user:
+	docker-compose logs -f user
+
+restart-user:
+	docker-compose stop user && docker-compose up -d user
+
+## company
+build-company:
+	docker-compose build company
+
+up-company:
+	docker-compose up -d company
+
+down-company:
+	docker-compose stop company
+
+logs-company:
+	docker-compose logs -f company
+
+restart-company:
+	docker-compose stop company && docker-compose up -d company
+
+## actlog
+build-actlog:
+	docker-compose build actlog
+
+up-actlog:
+	docker-compose up -d actlog
+
+down-actlog:
+	docker-compose stop actlog
+
+logs-actlog:
+	docker-compose logs -f actlog
+
+restart-actlog:
+	docker-compose stop actlog && docker-compose up -d actlog
+
+## finreport
+build-finreport:
+	docker-compose build finreport
+
+up-finreport:
+	docker-compose up -d finreport
+
+down-finreport:
+	docker-compose stop finreport
+
+logs-finreport:
+	docker-compose logs -f finreport
+
+restart-finreport:
+	docker-compose stop finreport && docker-compose up -d finreport

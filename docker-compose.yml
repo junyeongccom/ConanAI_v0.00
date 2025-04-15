@@ -1,58 +1,70 @@
 services:
+  postgres:
+    image: postgres:15
+    container_name: hc_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: hc_user
+      POSTGRES_PASSWORD: hc_password
+      POSTGRES_DB: hc_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
   gateway:
     build:
-      context: ./gateway
+      context: ./gateway_service
       dockerfile: Dockerfile
-    container_name: gateway
     ports:
-      - "8000:8000"
+      - "8080:8080"
     env_file:
-      - ./gateway/.env
+      - ./gateway_service/.env
     depends_on:
-      - oauth
-      - logging
-    restart: always
+      - postgres
 
-  oauth:
+  actlog:
     build:
-      context: ./oauth
+      context: ./actlog_service
       dockerfile: Dockerfile
-    container_name: oauth
     ports:
-      - "8001:8000"
+      - "8081:8081"
     env_file:
-      - ./oauth/.env
-    restart: always
-
-  logging:
+      - ./actlog_service/.env
+    depends_on:
+      - postgres
+  company:
     build:
-      context: ./logging
+      context: ./company_service
       dockerfile: Dockerfile
-    container_name: logging
     ports:
-      - "8002:8000"
+      - "8083:8083"
     env_file:
-      - ./logging/.env
-    restart: always
+      - ./company_service/.env
+    depends_on:
+      - postgres
 
-  # 추가적인 서비스들 예시
-  disclosure:
+  finreport:
     build:
-      context: ./disclosure
-    container_name: disclosure
+      context: ./finreport_service
+      dockerfile: Dockerfile
     ports:
-      - "8003:8000"
+      - "8085:8085"
     env_file:
-      - ./disclosure/.env
-    restart: always
+      - ./finreport_service/.env
+    depends_on:
+      - postgres
 
-  companies:
+  user:
     build:
-      context: ./companies
-    container_name: companies
+      context: ./user_service
+      dockerfile: Dockerfile
     ports:
-      - "8004:8000"
+      - "8086:8086"
     env_file:
-      - ./companies/.env
-    restart: always
+      - ./user_service/.env
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
