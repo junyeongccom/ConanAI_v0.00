@@ -1,1 +1,2 @@
- 
+async def test():
+    pass
