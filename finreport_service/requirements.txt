@@ -9,3 +9,4 @@ httpx
 lxml
 requests
 beautifulsoup4
+pandas
