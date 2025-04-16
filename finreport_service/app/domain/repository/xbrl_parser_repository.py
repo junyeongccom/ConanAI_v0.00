@@ -1,24 +1,34 @@
-import os
-from lxml import etree
-
+import zipfile
+from pathlib import Path
 
 class XBRLParserRepository:
     def __init__(self):
-        # 컨테이너 내부 경로를 사용합니다
-        self.data_dir = os.getenv("XBRL_FILE_DIR", "/app/documents")
+        # 도커 컨테이너에서의 볼륨 마운트 경로로 수정
+        self.zip_root = Path("/app/app/dart_documents")
+        self.extract_root = self.zip_root / "extracted"
+        self.extract_root.mkdir(parents=True, exist_ok=True)
+        print(f"[INFO] ZIP 파일 저장 경로: {self.zip_root}")
+        print(f"[INFO] 압축 해제 경로: {self.extract_root}")
 
-    def parse_xbrl(self, filename: str):
-        file_path = os.path.join(self.data_dir, filename)
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"XBRL 파일을 찾을 수 없습니다: {file_path}")
+    def unzip_xbrl_files(self, zip_filename: str) -> list[str]:
+        # 확장자 확인 및 추가
+        if not zip_filename.lower().endswith('.zip'):
+            zip_filename = f"{zip_filename}.zip"
+        
+        zip_path = self.zip_root / zip_filename
+        print(f"[INFO] 압축 해제할 파일 경로: {zip_path}")
+        
+        if not zip_path.exists():
+            raise FileNotFoundError(f"ZIP 파일이 존재하지 않습니다: {zip_path}")
 
-        tree = etree.parse(file_path)
-        root = tree.getroot()
+        extract_folder = zip_filename.replace(".zip", "")
+        extract_dir = self.extract_root / extract_folder
+        
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+            print(f"[INFO] 압축 해제 완료: {extract_dir}")
 
-        # 예시: 모든 context 요소 출력
-        contexts = root.findall(".//{http://www.xbrl.org/2003/instance}context")
-        context_data = []
-        for ctx in contexts:
-            context_data.append(etree.tostring(ctx, pretty_print=True, encoding='unicode'))
-
-        return context_data
+        # 추출된 파일 목록 반환
+        extracted_files = [str(p.name) for p in extract_dir.glob("*") if p.is_file()]
+        print(f"[INFO] 추출된 파일: {extracted_files}")
+        return extracted_files

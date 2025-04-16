@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 from ..domain.controller.opendart_controller import DocumentFetchController
 
-router = APIRouter()
+router = APIRouter(prefix="/opendart")
 controller = DocumentFetchController()
 
 @router.get("/fetch-xml")
