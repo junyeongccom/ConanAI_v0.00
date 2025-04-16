@@ -5,3 +5,6 @@ sqlalchemy
 python-dotenv
 pytz
 email_validator
+httpx
+lxml
+requests
