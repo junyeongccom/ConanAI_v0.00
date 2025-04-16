@@ -54,6 +54,9 @@ services:
       - ./finreport_service/.env
     depends_on:
       - postgres
+    volumes:
+      - ./dart_documents:/app/app/dart_documents
+
 
   user:
     build:

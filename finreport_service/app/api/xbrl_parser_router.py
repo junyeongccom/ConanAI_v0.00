@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Query
 from ..domain.controller.xbrl_parser_controller import XBRLParserController
 
-router = APIRouter()
+# 라우터에 명시적으로 태그와 prefix 설정
+router = APIRouter(prefix="/xbrl-parser", tags=["XBRL Parser"])
 controller = XBRLParserController()
 
-@router.get("/parse")
-def parse_xbrl_file(filename: str = Query(..., description="분석할 .xbrl 파일명")):
-    result = controller.parse_xbrl_file(filename)
-    return {
-        "status": "success",
-        "file": filename,
-        "parsed": result
-    }
+@router.get("/extract")
+def extract_files(zip_filename: str = Query(...)):
+    result = controller.extract_from_zip(zip_filename)
+    return {"status": "success", "extracted_files": result}

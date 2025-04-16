@@ -4,5 +4,5 @@ class XBRLParserService:
     def __init__(self):
         self.repository = XBRLParserRepository()
 
-    def parse_file(self, filename: str):
-        return self.repository.parse_xbrl(filename)
+    def extract_files(self, zip_filename: str) -> list[str]:
+        return self.repository.unzip_xbrl_files(zip_filename)

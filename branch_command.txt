@@ -3,8 +3,8 @@
 
 1. 새 기능 개발 시 브랜치 생성 작업
 # 브랜치 생성 및 전환
-git checkout -b feature/service-name/feature-description
-ex. git checkout -b feature/user-service/login-api
+git checkout -b feature/SKY-(이슈번호)-service-name/feature-description
+ex. git checkout -b feature/SKY-94-user-service/login-api
 # 변경 사항 확인
 git status
 # 변경된 파일 스테이징
