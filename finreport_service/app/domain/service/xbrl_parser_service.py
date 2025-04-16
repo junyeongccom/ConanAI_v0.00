@@ -4,5 +4,5 @@ class XBRLParserService:
     def __init__(self):
         self.repository = XBRLParserRepository()
 
-    def extract_files(self, zip_filename: str) -> list[str]:
-        return self.repository.unzip_xbrl_files(zip_filename)
+    def filter_balance_sheet_tags(self, xbrl_filename: str, rcept_no: str) -> list[str]:
+        return self.repository.get_balance_sheet_tags(xbrl_filename, rcept_no)
