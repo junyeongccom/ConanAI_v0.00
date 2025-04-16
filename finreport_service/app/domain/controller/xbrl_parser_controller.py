@@ -4,5 +4,5 @@ class XBRLParserController:
     def __init__(self):
         self.service = XBRLParserService()
 
-    def extract_from_zip(self, zip_filename: str) -> list[str]:
-        return self.service.extract_files(zip_filename)
+    def print_balance_sheet_tags(self, xbrl_filename: str, rcept_no: str) -> list[str]:
+        return self.service.filter_balance_sheet_tags(xbrl_filename, rcept_no)
