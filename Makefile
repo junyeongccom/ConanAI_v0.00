@@ -97,3 +97,20 @@ logs-finreport:
 
 restart-finreport:
 	docker-compose stop finreport && docker-compose up -d finreport
+
+## xbrlgen
+build-xbrlgen:
+	docker-compose build xbrlgen
+
+up-xbrlgen:
+	docker-compose up -d xbrlgen
+
+down-xbrlgen:
+	docker-compose stop xbrlgen
+
+logs-xbrlgen:
+	docker-compose logs -f xbrlgen
+
+restart-xbrlgen:
+	docker-compose stop xbrlgen && docker-compose up -d xbrlgen
+
