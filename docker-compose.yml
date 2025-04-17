@@ -69,5 +69,16 @@ services:
     depends_on:
       - postgres
 
+  xbrlgen:
+    build:
+      context: ./xbrlgen_service
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8087"
+    env_file:
+      - ./xbrlgen_service/.env
+    depends_on:
+      - postgres
+
 volumes:
   pgdata:

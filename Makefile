@@ -82,6 +82,7 @@ logs-actlog:
 restart-actlog:
 	docker-compose stop actlog && docker-compose up -d actlog
 
+
 ## dsdgen
 build-dsdgen:
 	docker-compose build dsdgen
@@ -97,3 +98,22 @@ logs-dsdgen:
 
 restart-dsdgen:
 	docker-compose stop dsdgen && docker-compose up -d dsdgen
+
+
+## xbrlgen
+build-xbrlgen:
+	docker-compose build xbrlgen
+
+up-xbrlgen:
+	docker-compose up -d xbrlgen
+
+down-xbrlgen:
+	docker-compose stop xbrlgen
+
+logs-xbrlgen:
+	docker-compose logs -f xbrlgen
+
+restart-xbrlgen:
+	docker-compose stop xbrlgen && docker-compose up -d xbrlgen
+
+
