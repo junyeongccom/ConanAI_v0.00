@@ -11,6 +11,7 @@ SKYC/
 ├── company_service/     # 기업 관리 서비스 (8083)
 ├── finreport_service/   # 재무제표 관리 서비스 (8085)
 ├── user_service/        # 사용자 관리 서비스 (8086)
+├── xbrlgen_service/     # XBRL 문서 생성 서비스 (8087)
 ├── docker-compose.yml   # 전체 서비스 배포 설정
 └── Makefile            # 서비스별 빌드 및 실행 명령어
 ```
@@ -66,6 +67,7 @@ make logs-user
 - Company Service: 8083
 - FinReport Service: 8085
 - User Service: 8086
+- XBRLGen Service: 8087
 
 ## API 문서
 
@@ -75,6 +77,7 @@ make logs-user
 - http://localhost:8083/docs (Company Service)
 - http://localhost:8085/docs (FinReport Service)
 - http://localhost:8086/docs (User Service)
+- http://localhost:8087/docs (XBRLGen Service)
 
 ## 개발 가이드
 
