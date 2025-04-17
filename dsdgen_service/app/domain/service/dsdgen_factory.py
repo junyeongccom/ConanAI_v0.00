@@ -1,0 +1,2 @@
+class FinReportsFactory:
+    pass
