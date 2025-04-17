@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+asyncpg
+sqlalchemy
+python-dotenv
+pytz
+email_validator
+httpx
+lxml
+requests
+beautifulsoup4
+pandas
