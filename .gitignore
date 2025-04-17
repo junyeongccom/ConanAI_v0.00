@@ -59,4 +59,8 @@ Thumbs.db
 *.zip
 *.tar.gz
 *.rar
-*.7z 
+*.7z
+
+# DART documents
+dart_documents/
+dart_documents/extracted/ 

@@ -9,7 +9,7 @@ SKYC/
 ├── gateway_service/     # API Gateway (8080)
 ├── actlog_service/      # 활동 로그 관리 서비스 (8081)
 ├── company_service/     # 기업 관리 서비스 (8083)
-├── finreport_service/   # 재무제표 관리 서비스 (8085)
+├── dsdgen_service/      # 재무상태표 DSD 생성 서비스 (8085)
 ├── user_service/        # 사용자 관리 서비스 (8086)
 ├── docker-compose.yml   # 전체 서비스 배포 설정
 └── Makefile            # 서비스별 빌드 및 실행 명령어
@@ -64,7 +64,7 @@ make logs-user
 - Gateway Service: 8080
 - ActLog Service: 8081
 - Company Service: 8083
-- FinReport Service: 8085
+- DSDGen Service: 8085
 - User Service: 8086
 
 ## API 문서
@@ -73,7 +73,7 @@ make logs-user
 - http://localhost:8080/docs (Gateway Service)
 - http://localhost:8081/docs (ActLog Service)
 - http://localhost:8083/docs (Company Service)
-- http://localhost:8085/docs (FinReport Service)
+- http://localhost:8085/docs (DSDGen Service)
 - http://localhost:8086/docs (User Service)
 
 ## 개발 가이드

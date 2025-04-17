@@ -82,18 +82,18 @@ logs-actlog:
 restart-actlog:
 	docker-compose stop actlog && docker-compose up -d actlog
 
-## finreport
-build-finreport:
-	docker-compose build finreport
+## dsdgen
+build-dsdgen:
+	docker-compose build dsdgen
 
-up-finreport:
-	docker-compose up -d finreport
+up-dsdgen:
+	docker-compose up -d dsdgen
 
-down-finreport:
-	docker-compose stop finreport
+down-dsdgen:
+	docker-compose stop dsdgen
 
-logs-finreport:
-	docker-compose logs -f finreport
+logs-dsdgen:
+	docker-compose logs -f dsdgen
 
-restart-finreport:
-	docker-compose stop finreport && docker-compose up -d finreport
+restart-dsdgen:
+	docker-compose stop dsdgen && docker-compose up -d dsdgen

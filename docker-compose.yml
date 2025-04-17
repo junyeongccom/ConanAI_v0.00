@@ -44,14 +44,14 @@ services:
     depends_on:
       - postgres
 
-  finreport:
+  dsdgen:
     build:
-      context: ./finreport_service
+      context: ./dsdgen_service
       dockerfile: Dockerfile
     ports:
       - "8085:8085"
     env_file:
-      - ./finreport_service/.env
+      - ./dsdgen_service/.env
     depends_on:
       - postgres
     volumes:

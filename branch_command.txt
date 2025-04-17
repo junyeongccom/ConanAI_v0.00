@@ -10,7 +10,7 @@ git status
 # 변경된 파일 스테이징
 git add .
 # 작업브랜치에 커밋
-git commit -m "서비스명: 구현 내용 간략히 설명"
+git commit -m "이슈번호: 구현 내용 간략히 설명"
 ex. git commit -m "user_service: 로그인 API 구현"
 # 작업브랜치에 푸쉬
 git push -u origin 브랜치이름
