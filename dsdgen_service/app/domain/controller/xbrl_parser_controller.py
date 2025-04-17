@@ -5,26 +5,30 @@ class XBRLParserController:
     def __init__(self):
         self.service = XBRLParserService()
 
-    def get_balance_sheet_dataframe(self, rcept_no: str) -> Dict[str, Any]:
+    async def get_xbrl_to_dataframe(self, corp_code: str) -> Dict[str, Any]:
         """
-        재무상태표 데이터를 DataFrame에서 JSON 형식으로 변환하여 반환합니다.
+        XBRL 데이터를 파싱하여 데이터프레임 결과를 JSON 형식으로 변환하여 반환합니다.
         
         Args:
-            rcept_no: 접수번호
+            corp_code: 기업 고유번호
             
         Returns:
-            Dict[str, Any]: 재무상태표 데이터
+            Dict[str, Any]: XBRL 데이터
+            
+        Raises:
+            Exception: 데이터 파싱 또는, DB 처리 중 오류 발생 시
         """
-        df = self.service.get_balance_sheet_dataframe(rcept_no)
+        # 비동기로 서비스 메서드 호출
+        df = await self.service.get_xbrl_to_dataframe(corp_code)
         
         if df.empty:
             return {"success": False, "message": "데이터를 찾을 수 없습니다.", "data": []}
         
         # DataFrame을 JSON 형식으로 변환
-        balance_sheet_data = df.to_dict(orient='records')
+        xbrl_data = df.to_dict(orient='records')
         
         return {
             "success": True,
-            "message": f"재무상태표 데이터 {len(balance_sheet_data)}개 항목이 추출되었습니다.",
-            "data": balance_sheet_data
+            "message": f"XBRL 데이터 {len(xbrl_data)}개 항목이 추출되었습니다.",
+            "data": xbrl_data
         }
