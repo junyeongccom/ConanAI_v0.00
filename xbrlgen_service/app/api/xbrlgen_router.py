@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File
 from app.domain.controller.xbrlgen_controller import XBRLGenController
 
-router = APIRouter(prefix="/api/xbrlgen", tags=["XBRL Generation"])
+router = APIRouter(tags=["XBRL Generatior"])
 controller = XBRLGenController()
 
 @router.post("/upload")
