@@ -1,17 +1,11 @@
 from fastapi import FastAPI
 from fastapi.routing import APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from app.api.auth_router import router as auth_router
-from app.foundation.db import connect_db
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await connect_db()
-    yield
 
 # ✅ FastAPI 인스턴스는 단 한 번 선언
-app = FastAPI(title="API Gateway", lifespan=lifespan)
+app = FastAPI(title="API Gateway")
 
 # ✅ API 라우터 정의 및 라우터 등록
 api_router = APIRouter(prefix="/api")
