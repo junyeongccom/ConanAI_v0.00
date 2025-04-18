@@ -2,7 +2,7 @@ import os
 import shutil
 from datetime import datetime
 import pandas as pd
-
+from app.domain.service.xbrl_converter import XBRLConverter
 from fastapi import UploadFile
 
 UPLOAD_DIR = "uploads"
@@ -20,11 +20,16 @@ class XBRLGenService:
         # 2️⃣ 연결재무상태표 시트 파싱 (sheet name: D210000)
         data = self.parse_balance_sheet(filepath)
 
+        # 3. XBRL(XML)로 변환하여 저장
+        converter = XBRLConverter()
+        xbrl_path = converter.convert_to_xbrl(data, filename)
+
         return {
             "filename": filename,
             "sheet": "D210000",
             "data": data,
-            "message": "엑셀 업로드 + 연결재무상태표 파싱 성공!"
+            "xbrl_path": xbrl_path,
+            "message": "엑셀 업로드 + 연결재무상태표 파싱 + XBRL 생성 성공!"
         }
 
     def parse_balance_sheet(self, path: str) -> list:
