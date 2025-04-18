@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from .api.xbrl_parser_router import router as xbrl_parser_router
 from .api.opendart_router import router as opendart_router
 from .api.dsdgen_router import router as dsdgen_router
+from .api.dsd_auto_fetch_router import router as dsd_auto_fetch_router
 
 load_dotenv()
 app = FastAPI()
@@ -21,6 +22,7 @@ app.add_middleware(
 app.include_router(xbrl_parser_router)
 app.include_router(opendart_router)
 app.include_router(dsdgen_router)
+app.include_router(dsd_auto_fetch_router)
 
 
 @app.get("/")
