@@ -1,7 +1,5 @@
 from ...foundation.xbrl_parser.xbrl_parser import XBRLParser
 import pandas as pd
-from typing import Optional, Dict, Any
-
 from ..repository.xbrl_parser_repository import insert_dsd_source_bulk
 
 class XBRLParserService:
