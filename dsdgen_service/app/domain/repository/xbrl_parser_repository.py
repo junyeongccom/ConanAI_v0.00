@@ -1,446 +1,326 @@
-import re
-import os
-from pathlib import Path
-from bs4 import BeautifulSoup
-import pandas as pd
+"""
+XBRL 파싱 결과를 데이터베이스에 저장하는 리포지토리 모듈
 
-class XBRLParserRepository:
-    def __init__(self):
-        # docker-compose에서 볼륨 마운트된 경로로 설정
-        self.extracted_dir = Path("/app/app/dart_documents/extracted")
-        # 디렉토리가 없으면 생성
-        os.makedirs(self.extracted_dir, exist_ok=True)
-        print(f"[INFO] XBRL 파일 경로 기본 디렉토리: {self.extracted_dir}")
+이 모듈은 XBRL 파서에서 생성된 데이터프레임을 PostgreSQL 데이터베이스의 dsd_source 테이블에
+저장하기 위한 함수와 유틸리티를 제공합니다.
+"""
 
-    def _find_xbrl_files(self, rcept_no: str) -> tuple[Path, Path, BeautifulSoup, BeautifulSoup]:
+from typing import List, Dict, Any, Optional
+import logging
+
+from asyncpg.pool import Pool
+from asyncpg.exceptions import UniqueViolationError, PostgresError
+
+from ...foundation.db.asyncpg_pool import get_pool
+
+# 로깅 설정
+logger = logging.getLogger(__name__)
+
+
+async def _ensure_unique_constraint(conn) -> bool:
+    """
+    dsd_source 테이블에 필요한 유니크 제약 조건이 존재하는지 확인하고, 없다면 추가합니다.
+    
+    Args:
+        conn: asyncpg 커넥션 객체
+        
+    Returns:
+        bool: 제약 조건 생성 성공 여부
+    """
+    try:
+        # 테이블과 제약 조건의 존재 여부 확인
+        exists_query = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM pg_constraint
+                WHERE conname = 'unique_dsd_source_entry'
+            );
         """
-        접수번호로 디렉토리를 찾고, .xbrl 파일과 lab-ko.xml 파일을 함께 찾아 파싱합니다.
+        exists = await conn.fetchval(exists_query)
         
-        Args:
-            rcept_no: 접수번호
+        if not exists:
+            logger.info("유니크 제약 조건 'unique_dsd_source_entry'가 존재하지 않아 생성합니다.")
             
-        Returns:
-            tuple: (xbrl_path, label_path, xbrl_soup, label_soup)
-        """
-        # 접수번호로 디렉토리 찾기
-        rcept_dir = None
-        available_dirs = [d for d in os.listdir(self.extracted_dir) 
-                         if os.path.isdir(self.extracted_dir / d)]
-        
-        print(f"[INFO] 사용 가능한 디렉토리: {available_dirs}")
-        
-        # 접수번호로 시작하는 디렉토리 찾기
-        for dir_name in available_dirs:
-            if dir_name.startswith(rcept_no):
-                rcept_dir = self.extracted_dir / dir_name
-                print(f"[INFO] 접수번호 {rcept_no}로 시작하는 디렉토리를 찾았습니다: {dir_name}")
-                break
-        
-        # 정확한 디렉토리를 찾지 못한 경우
-        if rcept_dir is None:
-            # 유사한 디렉토리 찾기 시도
-            for dir_name in available_dirs:
-                if rcept_no in dir_name:
-                    rcept_dir = self.extracted_dir / dir_name
-                    print(f"[INFO] 접수번호 {rcept_no}가 포함된 디렉토리를 찾았습니다: {dir_name}")
-                    break
+            # 테이블 존재 여부 확인
+            table_exists_query = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_name = 'dsd_source'
+                );
+            """
+            table_exists = await conn.fetchval(table_exists_query)
             
-            # 그래도 찾지 못한 경우 가장 최근 디렉토리 사용
-            if rcept_dir is None and available_dirs:
-                dir_name = available_dirs[-1]
-                rcept_dir = self.extracted_dir / dir_name
-                print(f"[INFO] 접수번호에 맞는 디렉토리를 찾지 못해 가장 최근 디렉토리를 사용합니다: {dir_name}")
-        
-        # 디렉토리를 찾지 못한 경우
-        if rcept_dir is None:
-            raise FileNotFoundError(f"추출된 디렉토리가 비어 있거나 접수번호에 해당하는 디렉토리를 찾을 수 없습니다: {self.extracted_dir}")
-        
-        # 디렉토리 내의 모든 파일 목록 가져오기
-        available_files = os.listdir(rcept_dir)
-        print(f"[INFO] 디렉토리 {rcept_dir.name}에 있는 파일: {len(available_files)}개")
-        
-        # .xbrl 파일 찾기
-        xbrl_files = [f for f in available_files if f.endswith('.xbrl')]
-        if not xbrl_files:
-            raise FileNotFoundError(f"XBRL 파일을 찾을 수 없습니다: {rcept_dir}")
-        
-        # lab-ko.xml 파일 찾기
-        label_files = [f for f in available_files if 'lab-ko.xml' in f]
-        if not label_files:
-            print(f"[WARN] lab-ko.xml 파일을 찾을 수 없습니다: {rcept_dir}")
-            label_path = None
-            label_soup = None
+            if not table_exists:
+                logger.warning("테이블 'dsd_source'가 존재하지 않습니다. 테이블을 먼저 생성해야 합니다.")
+                return False
+            
+            # 유니크 제약 조건 추가
+            create_constraint_query = """
+                ALTER TABLE dsd_source
+                ADD CONSTRAINT unique_dsd_source_entry
+                UNIQUE (corp_code, source_name, year);
+            """
+            await conn.execute(create_constraint_query)
+            logger.info("유니크 제약 조건 'unique_dsd_source_entry'가 성공적으로 생성되었습니다.")
+            return True
         else:
-            label_path = rcept_dir / label_files[0]
-            print(f"[INFO] 라벨 파일을 찾았습니다: {label_path}")
-            try:
-                with open(label_path, "r", encoding="utf-8") as file:
-                    label_content = file.read()
-                label_soup = BeautifulSoup(label_content, 'xml')
-                print(f"[INFO] 라벨 파일 파싱 성공")
-            except Exception as e:
-                print(f"[ERROR] 라벨 파일 파싱 실패: {e}")
-                label_soup = None
-        
-        # .xbrl 파일 파싱
-        xbrl_path = rcept_dir / xbrl_files[0]
-        print(f"[INFO] XBRL 파일을 찾았습니다: {xbrl_path}")
-        
-        try:
-            with open(xbrl_path, "r", encoding="utf-8") as file:
-                xbrl_content = file.read()
+            logger.info("유니크 제약 조건 'unique_dsd_source_entry'가 이미 존재합니다.")
+            return True
             
-            # BeautifulSoup으로 XML 파싱
-            try:
-                xbrl_soup = BeautifulSoup(xbrl_content, 'xml')
-                parser = 'xml'
-            except:
-                print("[WARN] XML 파서로 파싱 실패, lxml로 재시도합니다.")
-                xbrl_soup = BeautifulSoup(xbrl_content, 'lxml')
-                parser = 'lxml'
-            
-            print(f"[INFO] XBRL 파일을 {parser} 파서로 파싱했습니다.")
-        except Exception as e:
-            raise ValueError(f"XBRL 파일 파싱 실패: {e}")
-        
-        return xbrl_path, label_path, xbrl_soup, label_soup
+    except Exception as e:
+        logger.error(f"유니크 제약 조건 확인/생성 중 오류 발생: {e}")
+        return False
 
-    def get_label_ko_mapping(self, label_soup: BeautifulSoup) -> dict:
-        """
-        lab-ko.xml 파일에서 태그명과 한글 라벨 간의 매핑을 추출합니다.
-        
-        Args:
-            label_soup: 파싱된 라벨 파일의 BeautifulSoup 객체
-            
-        Returns:
-            dict: 태그명을 키로, 한글 라벨을 값으로 하는 딕셔너리
-        """
-        if label_soup is None:
-            print("[WARN] 라벨 파일이 없어 한글 라벨 매핑을 생성할 수 없습니다.")
-            return {}
-        
-        # 태그명 → 한글 라벨 매핑
-        label_mapping = {}
-        
-        # labelLink 요소 찾기
-        label_links = label_soup.find_all('labelLink')
-        if not label_links:
-            print("[WARN] labelLink 요소를 찾을 수 없습니다.")
-            return {}
-        
-        # loc 요소와 label 요소 처리
-        for label_link in label_links:
-            # loc 요소에서 xlink:href와 xlink:label 추출
-            loc_elements = label_link.find_all('loc')
-            loc_dict = {}
-            
-            for loc in loc_elements:
-                href = loc.get('xlink:href', '')
-                label = loc.get('xlink:label', '')
-                
-                # href에서 태그 이름 추출 (예: #ifrs-full_CurrentAssets)
-                if href.startswith('#'):
-                    tag_name = href[1:]  # '#' 제거
-                    loc_dict[label] = tag_name
-            
-            # label 요소에서 xlink:label과 텍스트 추출
-            label_elements = label_link.find_all('label')
-            
-            for label_elem in label_elements:
-                label_ref = label_elem.get('xlink:label', '')
-                lang = label_elem.get('xml:lang', '')
-                role = label_elem.get('xlink:role', '')
-                
-                # 한국어 라벨만 추출 (표준 라벨 역할 고려)
-                if lang == 'ko' and ('label' in role or 'standard' in role.lower()):
-                    label_text = label_elem.text.strip()
-                    
-                    # labelArc 요소를 통해 loc와 label 연결
-                    label_arcs = label_link.find_all('labelArc', {'xlink:to': label_ref})
-                    
-                    for arc in label_arcs:
-                        from_ref = arc.get('xlink:from', '')
-                        if from_ref in loc_dict:
-                            tag_name = loc_dict[from_ref]
-                            
-                            # 네임스페이스 처리 (ifrs-full_CurrentAssets → CurrentAssets)
-                            if '_' in tag_name:
-                                _, tag_name = tag_name.split('_', 1)
-                            
-                            label_mapping[tag_name] = label_text
-        
-        print(f"[INFO] 한글 라벨 매핑 {len(label_mapping)}개 생성됨")
-        return label_mapping
 
-    def get_balance_sheet_tags(self, xbrl_soup: BeautifulSoup) -> list[dict]:
-        """
-        XBRL 파일에서 재무상태표 관련 태그를 추출합니다.
-        
-        Args:
-            xbrl_soup: 파싱된 XBRL 파일의 BeautifulSoup 객체
-            
-        Returns:
-            list[dict]: 추출된 태그 정보 목록 (항목명, 값, contextRef, 단위, 소수점 포함)
-        """
-        # 추출하려는 특정 태그 이름 목록 (네임스페이스 포함)
-        allowed_tags = [
-            "ifrs-full:CurrentAssets",
-            "ifrs-full:CashAndCashEquivalents",
-            "ifrs-full:ShorttermDepositsNotClassifiedAsCashEquivalents",
-            "ifrs-full:CurrentTradeReceivables",
-            "dart:ShortTermOtherReceivablesNet",
-            "ifrs-full:CurrentPrepaidExpenses",
-            "ifrs-full:Inventories",
-            "ifrs-full:OtherCurrentAssets",
-            "ifrs-full:NoncurrentAssets",
-            "ifrs-full:NoncurrentFinancialAssetsMeasuredAtFairValueThroughOtherComprehensiveIncome",
-            "ifrs-full:NoncurrentFinancialAssetsAtFairValueThroughProfitOrLoss",
-            "ifrs-full:InvestmentsInSubsidiariesJointVenturesAndAssociates",
-            "ifrs-full:NoncurrentRecognisedAssetsDefinedBenefitPlan",
-            "ifrs-full:DeferredTaxAssets",
-            "ifrs-full:OtherNoncurrentAssets",
-            "ifrs-full:Assets",
-            "ifrs-full:CurrentLiabilities",
-            "ifrs-full:TradeAndOtherCurrentPayablesToTradeSuppliers",
-            "ifrs-full:OtherCurrentPayables",
-            "ifrs-full:CurrentAdvances",
-            "dart:ShortTermWithholdings",
-            "ifrs-full:AccrualsClassifiedAsCurrent",
-            "ifrs-full:CurrentTaxLiabilities",
-            "ifrs-full:CurrentPortionOfLongtermBorrowings",
-            "ifrs-full:CurrentProvisions",
-            "ifrs-full:OtherCurrentLiabilities",
-            "ifrs-full:NoncurrentLiabilities",
-            "ifrs-full:NoncurrentPortionOfNoncurrentBondsIssued",
-            "ifrs-full:NoncurrentPortionOfNoncurrentLoansReceived",
-            "ifrs-full:OtherNoncurrentPayables",
-            "ifrs-full:NoncurrentProvisions",
-            "ifrs-full:OtherNoncurrentLiabilities",
-            "ifrs-full:Liabilities",
-            "ifrs-full:IssuedCapital",
-            "dart:IssuedCapitalOfPreferredStock",
-            "dart:IssuedCapitalOfCommonStock",
-            "ifrs-full:SharePremium",
-            "ifrs-full:RetainedEarnings",
-            "dart:ElementsOfOtherStockholdersEquity",
-            "ifrs-full:EquityAndLiabilities"
-        ]
-        
-        print(f"[INFO] 추출할 태그 목록: {len(allowed_tags)} 개")
-        
-        # 태그 이름을 정확히 매칭하여 추출
-        extracted_tags = []
-        processed_count = 0
-        filtered_count = 0
-        
-        for tag_name in allowed_tags:
-            # 해당 태그 이름을 가진 모든 요소 찾기
-            matching_tags = xbrl_soup.find_all(tag_name)
-            
-            if matching_tags:
-                for tag in matching_tags:
-                    # 네임스페이스(콜론) 처리
-                    if ':' in tag.name:
-                        namespace, local_name = tag.name.split(':', 1)
-                    else:
-                        local_name = tag.name
-                    
-                    # 값 (텍스트 내용)
-                    value = tag.text.strip() if tag.text else ""
-                    
-                    # contextRef 속성
-                    context_ref = tag.get('contextRef', '')
-                    
-                    # 별도재무제표(SeparateMember)가 포함된 항목만 필터링
-                    if 'SeparateMember' not in context_ref:
-                        continue
-                    
-                    # 단위 (unitRef 속성)
-                    unit_ref = tag.get('unitRef', '')
-                    
-                    # 수치 정보에 포함된 소수점 정보 (decimals 속성)
-                    decimals = tag.get('decimals', '')
-                    
-                    # 데이터가 모두 있는 경우만 추가
-                    if value and context_ref:
-                        extracted_tags.append({
-                            "항목명": local_name,
-                            "값": value,
-                            "contextRef": context_ref,
-                            "단위": unit_ref,
-                            "소수점": decimals
-                        })
-                        processed_count += 1
-                        filtered_count += 1
-        
-        print(f"[INFO] 추출된 총 항목 수: {processed_count}")
-        print(f"[INFO] 별도재무제표(SeparateMember) 항목 수: {filtered_count}")
-        return extracted_tags
+async def insert_dsd_source_bulk(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    XBRL 파싱 결과 레코드를 dsd_source 테이블에 대량으로 삽입합니다.
     
-    def _extract_year_from_context(self, context_ref: str) -> str:
-        """
-        contextRef에서 회계연도를 추출합니다.
-        
-        Args:
-            context_ref: contextRef 값 (예: "PFY2023eFY_ifrs-full_ConsolidatedAndSeparateFinancialStatementsAxis_ifrs-full_SeparateMember")
-            
-        Returns:
-            str: 추출된 회계연도 (예: "2023")
-        """
-        # 회계연도 패턴 정규식
-        year_patterns = [
-            r'FY(\d{4})',         # FY2023
-            r'PFY(\d{4})',        # PFY2023
-            r'BPFY(\d{4})',       # BPFY2023
-            r'CFY(\d{4})',        # CFY2023
-            r'(\d{4})(?:Q[1-4])?'  # 2023 또는 2023Q1, 2023Q2 등
-        ]
-        
-        for pattern in year_patterns:
-            match = re.search(pattern, context_ref)
-            if match:
-                return match.group(1)
-        
-        # 일치하는 패턴이 없는 경우
-        print(f"[WARN] contextRef에서 회계연도를 추출할 수 없습니다: {context_ref}")
-        return "N/A"
+    이 함수는 DataFrame에서 변환된 레코드 리스트를 받아 PostgreSQL의 dsd_source 테이블에
+    bulk insert를 수행합니다. 레코드의 (corp_code, source_name, year) 조합이 이미 존재하는 경우
+    기존 값을 업데이트합니다.
     
-    def decimals_to_unit_label(self, decimals: str, unit: str) -> str:
-        """
-        decimals 값에 따라 적절한 단위 라벨을 반환합니다.
-        
-        Args:
-            decimals: 소수점 정보 (예: "-6")
-            unit: 원본 단위 (예: "KRW")
-            
-        Returns:
-            str: 변환된 단위 라벨 (예: "백만원 KRW")
-        """
-        if not decimals or not unit:
-            return f"원 {unit}" if unit else "원"
-            
+    Args:
+        records: XBRL 파싱 결과 레코드 리스트. 각 레코드는 다음 키를 포함해야 합니다:
+                - corp_code: 기업 코드
+                - 항목명: XBRL 항목 이름
+                - 값: XBRL 항목 값 (문자열, 쉼표 등 포함 가능)
+                - 연도: 연도 값
+                - 단위: 단위 정보
+    
+    Returns:
+        Dict[str, Any]: 처리 결과를 담은 딕셔너리
+                - success: 성공 여부
+                - inserted: 삽입된 레코드 수
+                - updated: 업데이트된 레코드 수
+                - error: 오류 메시지 (오류 발생 시)
+    
+    Raises:
+        PostgresError: 데이터베이스 연결 또는 쿼리 실행 중 오류 발생 시
+    """
+    if not records:
+        return {
+            "success": True,
+            "inserted": 0,
+            "updated": 0,
+            "message": "삽입할 레코드가 없습니다."
+        }
+    
+    # 데이터 전처리
+    processed_records = []
+    for record in records:
+        # XBRL 파서의 출력 형식에 맞춰 필드 이름 변환
+        # '항목명'은 'source_name'으로, '값'은 숫자로, '연도'는 정수로 변환
         try:
-            decimal_value = int(decimals)
+            # 쉼표 제거 후 정수나 실수로 변환
+            value_str = record.get('값', '0').replace(',', '')
+            value = int(float(value_str)) if value_str else 0
             
-            # 소수점 정보에 따른 단위 변환
-            if decimal_value == -3:
-                return f"천원 {unit}"
-            elif decimal_value == -4:
-                return f"만원 {unit}"
-            elif decimal_value == -6:
-                return f"백만원 {unit}"
-            elif decimal_value == -8:
-                return f"억원 {unit}"
+            # 연도가 문자열인 경우 정수로 변환
+            year_str = record.get('연도', '0')
+            year = int(year_str) if year_str.isdigit() else 0
+            
+            processed_record = {
+                'corp_code': record.get('기업코드', ''),
+                'source_name': record.get('항목명', ''),
+                'value': value,
+                'year': year,
+                'unit': record.get('단위', '')
+            }
+            processed_records.append(processed_record)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"레코드 처리 중 오류 발생: {e}, record={record}")
+            continue
+    
+    # 필수 필드 검증
+    for idx, record in enumerate(processed_records):
+        if not record['corp_code'] or not record['source_name'] or not record['year']:
+            logger.warning(f"필수 필드 누락: record={record}")
+            processed_records.pop(idx)
+    
+    if not processed_records:
+        return {
+            "success": False,
+            "error": "유효한 레코드가 없습니다.",
+            "inserted": 0,
+            "updated": 0
+        }
+    
+    # 데이터베이스 연결 및 쿼리 실행
+    pool: Optional[Pool] = None
+    inserted_count = 0
+    updated_count = 0
+    
+    try:
+        # 커넥션 풀 가져오기
+        pool = await get_pool()
+        
+        # 비동기로 executemany 실행
+        async with pool.acquire() as conn:
+            # 트랜잭션 시작
+            async with conn.transaction():
+                # 유니크 제약 조건 확인 및 생성
+                constraint_exists = await _ensure_unique_constraint(conn)
+                
+                # 레코드 수 카운트
+                results = await conn.fetch(
+                    "SELECT COUNT(*) FROM dsd_source"
+                )
+                before_count = results[0]['count']
+                
+                # 유니크 제약 조건이 존재하는 경우 ON CONFLICT 사용
+                if constraint_exists:
+                    # ON CONFLICT 구문을 사용한 UPSERT 쿼리
+                    query = """
+                        INSERT INTO dsd_source (corp_code, source_name, value, year, unit)
+                        VALUES ($1, $2, $3, $4, $5)
+                        ON CONFLICT (corp_code, source_name, year) 
+                        DO UPDATE SET 
+                            value = EXCLUDED.value,
+                            unit = EXCLUDED.unit
+                        RETURNING (xmax = 0) AS inserted
+                    """
+                    
+                    # executemany 대신 복수의 VALUES를 생성하는 방식으로 구현 (asyncpg 특성)
+                    stmt = await conn.prepare(query)
+                    
+                    # 각 레코드에 대해 쿼리 실행하고 삽입/업데이트 여부 추적
+                    for record in processed_records:
+                        result = await stmt.fetch(
+                            record['corp_code'],
+                            record['source_name'],
+                            record['value'],
+                            record['year'],
+                            record['unit']
+                        )
+                        if result and result[0]['inserted']:
+                            inserted_count += 1
+                        else:
+                            updated_count += 1
+                else:
+                    # 제약 조건이 없는 경우 더 느리지만 안전한 방식 사용
+                    for record in processed_records:
+                        # 먼저 레코드가 존재하는지 확인
+                        check_query = """
+                            SELECT id FROM dsd_source 
+                            WHERE corp_code = $1 AND source_name = $2 AND year = $3
+                        """
+                        existing = await conn.fetchrow(
+                            check_query,
+                            record['corp_code'],
+                            record['source_name'],
+                            record['year']
+                        )
+                        
+                        if existing:
+                            # 기존 레코드 업데이트
+                            update_query = """
+                                UPDATE dsd_source
+                                SET value = $1, unit = $2
+                                WHERE id = $3
+                            """
+                            await conn.execute(
+                                update_query,
+                                record['value'],
+                                record['unit'],
+                                existing['id']
+                            )
+                            updated_count += 1
+                        else:
+                            # 새 레코드 삽입
+                            insert_query = """
+                                INSERT INTO dsd_source (corp_code, source_name, value, year, unit)
+                                VALUES ($1, $2, $3, $4, $5)
+                            """
+                            await conn.execute(
+                                insert_query,
+                                record['corp_code'],
+                                record['source_name'],
+                                record['value'],
+                                record['year'],
+                                record['unit']
+                            )
+                            inserted_count += 1
+                
+                # 최종 레코드 수 확인
+                results = await conn.fetch(
+                    "SELECT COUNT(*) FROM dsd_source"
+                )
+                after_count = results[0]['count']
+                
+                # 확인용 로그
+                logger.info(f"Bulk insert 완료: {inserted_count}개 삽입, {updated_count}개 업데이트")
+        
+        return {
+            "success": True,
+            "inserted": inserted_count,
+            "updated": updated_count,
+            "total_records": len(processed_records),
+            "before_count": before_count,
+            "after_count": after_count,
+            "message": f"{inserted_count}개 레코드 삽입, {updated_count}개 레코드 업데이트 완료"
+        }
+        
+    except UniqueViolationError as e:
+        logger.error(f"중복 키 위반 오류: {e}")
+        return {
+            "success": False,
+            "error": f"중복 키 위반 오류: {str(e)}",
+            "inserted": inserted_count,
+            "updated": updated_count
+        }
+    except PostgresError as e:
+        logger.error(f"데이터베이스 오류: {e}")
+        return {
+            "success": False,
+            "error": f"데이터베이스 오류: {str(e)}",
+            "inserted": inserted_count,
+            "updated": updated_count
+        }
+    except Exception as e:
+        logger.error(f"예상치 못한 오류: {e}")
+        return {
+            "success": False,
+            "error": f"예상치 못한 오류: {str(e)}",
+            "inserted": inserted_count,
+            "updated": updated_count
+        }
+
+
+async def get_dsd_source_by_corp_code(corp_code: str, year: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    특정 기업 코드(및 선택적으로 연도)에 해당하는 dsd_source 데이터를 조회합니다.
+    
+    Args:
+        corp_code: 조회할 기업 코드
+        year: 선택적 연도 필터 (None인 경우 모든 연도 조회)
+    
+    Returns:
+        List[Dict[str, Any]]: 조회된 레코드 리스트
+    """
+    try:
+        pool = await get_pool()
+        
+        async with pool.acquire() as conn:
+            if year:
+                query = """
+                    SELECT * FROM dsd_source 
+                    WHERE corp_code = $1 AND year = $2
+                    ORDER BY source_name, year
+                """
+                rows = await conn.fetch(query, corp_code, year)
             else:
-                return f"원 {unit}"
-                
-        except ValueError:
-            # 소수점 정보가 정수로 변환될 수 없는 경우
-            print(f"[WARN] 소수점 정보를 해석할 수 없습니다: {decimals}")
-            return f"원 {unit}" if unit else "원"
-    
-    def format_number_with_decimals(self, value: str, decimals: str) -> str:
-        """
-        값과 소수점 정보를 기반으로 천단위 쉼표가 포함된 문자열로 변환합니다.
-        
-        Args:
-            value: 원본 숫자 문자열 (예: "68548442000000")
-            decimals: 소수점 정보 (예: "-6")
+                query = """
+                    SELECT * FROM dsd_source 
+                    WHERE corp_code = $1
+                    ORDER BY source_name, year
+                """
+                rows = await conn.fetch(query, corp_code)
             
-        Returns:
-            str: 변환된 숫자 문자열 (예: "68,548,442")
-        """
-        try:
-            # 문자열을 숫자로 변환
-            num_value = float(value)
+            # 결과를 딕셔너리 리스트로 변환
+            return [dict(row) for row in rows]
             
-            # decimals 값이 있는 경우 처리
-            if decimals:
-                try:
-                    decimal_value = int(decimals)
-                    
-                    # 음수일 경우 (예: "-6"은 백만 단위)
-                    if decimal_value < 0:
-                        divider = 10 ** abs(decimal_value)
-                        num_value = num_value / divider
-                    # 양수일 경우 (소수점 자릿수)
-                    else:
-                        # 소수점 자릿수만큼 표시
-                        return f"{num_value:,.{decimal_value}f}"
-                except ValueError:
-                    print(f"[WARN] 소수점 정보를 처리할 수 없습니다: {decimals}")
-            
-            # 천단위 쉼표가 포함된 문자열로 변환 (소수점 없음)
-            return f"{int(num_value):,}"
-        except ValueError:
-            print(f"[WARN] 숫자 값으로 변환할 수 없습니다: {value}")
-            return "0"
-        
-    def extract_balance_sheet_dataframe(self, rcept_no: str) -> pd.DataFrame:
-        """
-        접수번호로 디렉토리를 찾아 XBRL 파일과 lab-ko.xml 파일을 파싱하고,
-        재무상태표 데이터를 추출하여 정제된 DataFrame으로 반환합니다.
-        
-        Args:
-            rcept_no: 접수번호 (예: 20250331002860_11011)
-            
-        Returns:
-            pandas.DataFrame: 재무상태표 항목, 값, 연도, 단위 정보
-        """
-        # XBRL 파일과 라벨 파일 찾아서 파싱
-        _, _, xbrl_soup, label_soup = self._find_xbrl_files(rcept_no)
-        
-        # 태그 정보 추출
-        extracted_tags = self.get_balance_sheet_tags(xbrl_soup)
-        
-        if not extracted_tags:
-            print("[WARN] 추출된 태그가 없습니다.")
-            return pd.DataFrame()
-        
-        # 태그명 → 한글 라벨 매핑 가져오기
-        label_mapping = self.get_label_ko_mapping(label_soup)
-        
-        # 정제된 데이터 준비
-        refined_data = []
-        
-        for tag in extracted_tags:
-            # 태그명에 해당하는 한글 라벨 찾기
-            item_name = tag["항목명"]
-            ko_label = label_mapping.get(item_name, item_name)  # 매핑이 없으면 원본 사용
-            
-            # 값 변환 (소수점 정보 적용, 천단위 쉼표 포함)
-            raw_value = tag["값"]
-            decimals = tag["소수점"]
-            formatted_value = self.format_number_with_decimals(raw_value, decimals)
-            
-            # 연도 추출
-            context_ref = tag["contextRef"]
-            year = self._extract_year_from_context(context_ref)
-            
-            # 단위 변환 (decimals 값에 따라)
-            unit_ref = tag["단위"]
-            formatted_unit = self.decimals_to_unit_label(decimals, unit_ref)
-            
-            # 정제된 데이터 추가
-            refined_data.append({
-                "항목명(한글)": ko_label,
-                "값": formatted_value,
-                "연도": year,
-                "단위": formatted_unit
-            })
-        
-        # 정제된 정보로 DataFrame 생성
-        df = pd.DataFrame(refined_data)
-        
-        # 결과 정보 출력
-        print(f"[INFO] 정제된 DataFrame 열: {df.columns.tolist()}")
-        print("\n===== 추출된 재무상태표 데이터 =====")
-        # 최대 10개 항목만 출력
-        max_rows = min(100, len(df))
-        if not df.empty:
-            print(df.head(max_rows))
-        else:
-            print("추출된 데이터가 없습니다.")
-        print("==================================\n")
-        
-        return df
+    except Exception as e:
+        logger.error(f"데이터 조회 중 오류 발생: {e}")
+        return []

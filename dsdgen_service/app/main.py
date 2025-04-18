@@ -1,14 +1,26 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from .api.xbrl_parser_router import router as xbrl_parser_router
 from .api.opendart_router import router as opendart_router
+from .api.dsdgen_router import router as dsdgen_router
 
 load_dotenv()
 app = FastAPI()
 
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Next.js 개발 서버
+    allow_credentials=True,
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 헤더 허용
+)
+
 # 라우터에 이미 prefix가 설정되어 있으므로 추가 prefix 없이 등록
 app.include_router(xbrl_parser_router)
 app.include_router(opendart_router)
+app.include_router(dsdgen_router)
 
 
 @app.get("/")
