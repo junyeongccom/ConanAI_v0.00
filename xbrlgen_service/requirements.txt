@@ -9,3 +9,4 @@ python-multipart
 pandas
 xlrd         # .xls 읽기용
 openpyxl     # .xlsx 읽기용
+aiofiles     # 비동기 파일 처리용
