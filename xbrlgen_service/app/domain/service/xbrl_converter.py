@@ -83,37 +83,66 @@ class XBRLConverter:
         }
 
     def convert_to_xbrl(self, json_data: List[Dict], filename: str) -> str:
-        # XML 루트 생성 (네임스페이스 포함)
-        ns = "http://xbrl.ifrs.org/taxonomy/2023-03-01/ifrs-full"
-        ET.register_namespace("ifrs", ns)
-        root = ET.Element("xbrl")
+        # 네임스페이스 선언
+        xbrli_ns = "http://www.xbrl.org/2003/instance"
+        link_ns = "http://www.xbrl.org/2003/linkbase"
+        xlink_ns = "http://www.w3.org/1999/xlink"
+        iso4217_ns = "http://www.xbrl.org/2003/iso4217"
 
+        # ✅ 루트 태그 생성 시 네임스페이스 직접 지정
+        root = ET.Element(f"{{{xbrli_ns}}}xbrl", {
+            "xmlns": xbrli_ns,
+            "xmlns:link": link_ns,
+            "xmlns:xlink": xlink_ns,
+            "xmlns:iso4217": iso4217_ns
+        })
+
+        # ✅ schemaRef는 반드시 가장 먼저 추가되어야 함
+        ET.SubElement(
+            root,
+            f"{{{link_ns}}}schemaRef",
+            attrib={
+                f"{{{xlink_ns}}}type": "simple",
+                f"{{{xlink_ns}}}href": "http://xbrl.ifrs.org/taxonomy/2023-03-01/ifrs-full_ifrs-entry_point_2023-03-23.xsd"
+            }
+        )
+
+        # ✅ context 정의
+        context = ET.SubElement(root, "context", attrib={"id": "current"})
+        entity = ET.SubElement(context, "entity")
+        identifier = ET.SubElement(entity, "identifier", attrib={"scheme": "http://www.example.com"})
+        identifier.text = "Samsung"
+        period = ET.SubElement(context, "period")
+        instant = ET.SubElement(period, "instant")
+        instant.text = "2025-03-31"
+
+        # ✅ unit 정의
+        unit = ET.SubElement(root, "unit", attrib={"id": "KRW"})
+        measure = ET.SubElement(unit, "measure")
+        measure.text = "iso4217:KRW"
+
+        # ✅ 계정과목별 태그 생성
         for row in json_data:
-            print("🍇🍇계정과목:", row.get("계정과목"))  
             account_name = row.get("계정과목", "").strip()
             tag_name = self.xbrl_tag_map.get(account_name)
 
-            # 매핑된 태그가 없으면 건너뛰기
             if not tag_name:
                 print(f"⚠️ 매핑되지 않은 계정과목: {account_name}")
                 continue
 
             for key, value in row.items():
-                if key == "계정과목":
-                    continue
-                # 빈 문자열이나 None만 거름
-                if value in ("", None):  
+                if key == "계정과목" or value in ("", None):
                     continue
 
                 element = ET.SubElement(
                     root,
-                    f"{{{ns}}}{tag_name}",
+                    f"{{{xbrli_ns}}}{tag_name}",
                     attrib={"contextRef": "current", "unitRef": "KRW"}
                 )
-                print("✅ XML 태그 추가 중:", tag_name, key, value)
                 element.text = str(value)
+                print("✅ XML 태그 추가 중:", tag_name, key, value)
 
-        # XML 저장
+        # ✅ XML 저장
         save_filename = filename.replace(".xlsx", ".xml").replace(" ", "_")
         save_path = os.path.join(self.output_dir, save_filename)
 

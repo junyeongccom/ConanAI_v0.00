@@ -15,7 +15,8 @@ UPLOAD_DIR = "uploads"
 class XBRLGenService:
     async def save_uploaded_excel_file(self, file: UploadFile):
         os.makedirs(UPLOAD_DIR, exist_ok=True)
-        filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+       # 💡 엑셀 파일 이름 무시하고 XML 저장용 이름 강제 설정
+        filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_samsung.xlsx"
         filepath = os.path.join(UPLOAD_DIR, filename)
 
         # 1️⃣ 파일 저장

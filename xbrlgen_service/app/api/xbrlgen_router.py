@@ -1,7 +1,8 @@
 from fastapi import APIRouter, UploadFile, File
 from app.domain.controller.xbrlgen_controller import XBRLGenController
 import os
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+import aiofiles
 
 router = APIRouter(tags=["XBRL Generatior"])
 controller = XBRLGenController()
@@ -19,3 +20,10 @@ async def download_xbrl(filename: str):
     if os.path.exists(file_path):
         return FileResponse(path=file_path, filename=filename, media_type='application/xml')
     return {"error": "파일을 찾을 수 없습니다"}
+
+@router.get("/xbrlgen/view-xml", response_class=HTMLResponse)
+async def view_xbrl_xml():
+    async with aiofiles.open("xbrl_output/20250421_123650_samsung.xml", "r", encoding="utf-8") as f:
+        xml_string = await f.read()
+    highlighted = xml_string.replace("<", "&lt;").replace(">", "&gt;")
+    return f"<h2>📄 XBRL XML 결과</h2><pre>{highlighted}</pre>"
