@@ -11,3 +11,4 @@ python-jose[cryptography]
 httpx 
 pydantic-settings>=2.0
 requests
+python-multipart
