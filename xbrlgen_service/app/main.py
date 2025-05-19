@@ -9,7 +9,7 @@ app.include_router(xbrl_router, prefix="/xbrlgen")
 # 허용할 origin 설정 (프론트 주소)
 origins = [
     "http://localhost:3000",  # 개발 중일 때
-    "http://conan.ai.kr",
+    "https://conan.ai.kr",
 ]
 
 app.add_middleware(
