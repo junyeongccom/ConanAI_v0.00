@@ -9,6 +9,7 @@ SKYC/
 ├── gateway_service/     # API Gateway (8080)
 ├── actlog_service/      # 활동 로그 관리 서비스 (8081)
 ├── company_service/     # 기업 관리 서비스 (8083)
+├── esgdsd_service/      # ESG DSD 생성 서비스 (8084)
 ├── dsdgen_service/      # 재무상태표 DSD 생성 서비스 (8085)
 ├── user_service/        # 사용자 관리 서비스 (8086)
 ├── xbrlgen_service/     # XBRL 문서 생성 서비스 (8087)
@@ -23,6 +24,7 @@ SKYC/
 - Docker
 - Docker Compose
 - PostgreSQL
+- ML/AI (PyTorch, OpenCV, Tesseract)
 
 ## 개발 환경 설정
 
@@ -32,6 +34,8 @@ SKYC/
 - Docker Compose
 - Python 3.8 이상
 - Make
+- Tesseract OCR
+- Poppler-utils
 
 ### 환경 설정
 
@@ -65,6 +69,7 @@ make logs-user
 - Gateway Service: 8080
 - ActLog Service: 8081
 - Company Service: 8083
+- ESGDSD Service: 8084
 - DSDGen Service: 8085
 - User Service: 8086
 - XBRLGen Service: 8087
@@ -75,6 +80,7 @@ make logs-user
 - http://localhost:8080/docs (Gateway Service)
 - http://localhost:8081/docs (ActLog Service)
 - http://localhost:8083/docs (Company Service)
+- http://localhost:8084/docs (ESGDSD Service)
 - http://localhost:8085/docs (DSDGen Service)
 - http://localhost:8086/docs (User Service)
 - http://localhost:8087/docs (XBRLGen Service)

@@ -116,4 +116,20 @@ logs-xbrlgen:
 restart-xbrlgen:
 	docker-compose stop xbrlgen && docker-compose up -d xbrlgen
 
+## esgdsd
+build-esgdsd:
+	docker-compose build esgdsd
+
+up-esgdsd:
+	docker-compose up -d esgdsd
+
+down-esgdsd:
+	docker-compose stop esgdsd
+
+logs-esgdsd:
+	docker-compose logs -f esgdsd
+
+restart-esgdsd:
+	docker-compose stop esgdsd && docker-compose up -d esgdsd
+
 
