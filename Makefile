@@ -132,4 +132,20 @@ logs-esgdsd:
 restart-esgdsd:
 	docker-compose stop esgdsd && docker-compose up -d esgdsd
 
+## chatbot
+build-chatbot:
+	docker-compose build chatbot
+
+up-chatbot:
+	docker-compose up -d chatbot
+
+down-chatbot:
+	docker-compose stop chatbot
+
+logs-chatbot:
+	docker-compose logs -f chatbot
+
+restart-chatbot:
+	docker-compose stop chatbot && docker-compose up -d chatbot
+
 
