@@ -38,3 +38,6 @@ PR 페이지에서 "Merge pull request" 버튼 클릭
 원격 변경사항 가져오기: git pull
 필요 없는 로컬 브랜치 삭제: git branch -d feature/user-login
 새 기능 개발 시 최신 main에서 새 브랜치 생성: git checkout -b feature/new-feature
+
+
+깔깔
