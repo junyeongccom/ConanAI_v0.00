@@ -63,4 +63,7 @@ Thumbs.db
 
 # DART documents
 dart_documents/
-dart_documents/extracted/ 
+dart_documents/extracted/
+
+# Cursor
+.cursor/ 
