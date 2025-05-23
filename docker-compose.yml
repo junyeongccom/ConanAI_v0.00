@@ -53,19 +53,6 @@ services:
     networks:
       - app-network
 
-  company:
-    build:
-      context: ./company_service
-      dockerfile: Dockerfile
-    ports:
-      - "8083:8083"
-    env_file:
-      - ./company_service/.env
-    depends_on:
-      - postgres
-    networks:
-      - app-network
-
   esgdsd:
     build:
       context: ./esgdsd_service
@@ -93,32 +80,6 @@ services:
       - postgres
     volumes:
       - ./dart_documents:/app/app/dart_documents
-    networks:
-      - app-network
-
-  user:
-    build:
-      context: ./user_service
-      dockerfile: Dockerfile
-    ports:
-      - "8086:8086"
-    env_file:
-      - ./user_service/.env
-    depends_on:
-      - postgres
-    networks:
-      - app-network
-
-  xbrlgen:
-    build:
-      context: ./xbrlgen_service
-      dockerfile: Dockerfile
-    ports:
-      - "8087:8087"
-    env_file:
-      - ./xbrlgen_service/.env
-    depends_on:
-      - postgres
     networks:
       - app-network
 

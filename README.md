@@ -8,11 +8,8 @@
 SKYC/
 ├── gateway_service/     # API Gateway (8080)
 ├── stocktrend_service/  # 주식 트렌드 분석 서비스 (8082)
-├── company_service/     # 기업 관리 서비스 (8083)
 ├── esgdsd_service/      # ESG DSD 생성 서비스 (8084)
 ├── dsdgen_service/      # 재무상태표 DSD 생성 서비스 (8085)
-├── user_service/        # 사용자 관리 서비스 (8086)
-├── xbrlgen_service/     # XBRL 문서 생성 서비스 (8087)
 ├── n8n_service/         # n8n 워크플로우 자동화 서비스 (8088)
 ├── docker-compose.yml   # 전체 서비스 배포 설정
 └── Makefile            # 서비스별 빌드 및 실행 명령어
@@ -58,22 +55,19 @@ cp .env.example .env
 make all
 
 # 특정 서비스만 빌드 및 실행
-make build-user
-make up-user
+make build-gateway
+make up-gateway
 
 # 특정 서비스 로그 확인
-make logs-user
+make logs-gateway
 ```
 
 ## 서비스별 포트
 
 - Gateway Service: 8080
 - StockTrend Service: 8082
-- Company Service: 8083
 - ESGDSD Service: 8084
 - DSDGen Service: 8085
-- User Service: 8086
-- XBRLGen Service: 8087
 - N8N Service: 8088
 
 ## API 문서
@@ -81,11 +75,8 @@ make logs-user
 각 서비스의 API 문서는 다음 URL에서 확인할 수 있습니다:
 - http://localhost:8080/docs (Gateway Service)
 - http://localhost:8082/docs (StockTrend Service)
-- http://localhost:8083/docs (Company Service)
 - http://localhost:8084/docs (ESGDSD Service)
 - http://localhost:8085/docs (DSDGen Service)
-- http://localhost:8086/docs (User Service)
-- http://localhost:8087/docs (XBRLGen Service)
 - http://localhost:8088/docs (N8N Service)
 
 ## 개발 가이드
