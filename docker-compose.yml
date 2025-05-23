@@ -27,14 +27,14 @@ services:
     networks:
       - app-network
 
-  actlog:
+  stocktrend:
     build:
-      context: ./actlog_service
+      context: ./stocktrend_service
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "8082:8082"
     env_file:
-      - ./actlog_service/.env
+      - ./stocktrend_service/.env
     depends_on:
       - postgres
     networks:

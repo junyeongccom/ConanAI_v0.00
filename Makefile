@@ -66,21 +66,21 @@ logs-company:
 restart-company:
 	docker-compose stop company && docker-compose up -d company
 
-## actlog
-build-actlog:
-	docker-compose build actlog
+## stocktrend
+build-stocktrend:
+	docker-compose build stocktrend
 
-up-actlog:
-	docker-compose up -d actlog
+up-stocktrend:
+	docker-compose up -d stocktrend
 
-down-actlog:
-	docker-compose stop actlog
+down-stocktrend:
+	docker-compose stop stocktrend
 
-logs-actlog:
-	docker-compose logs -f actlog
+logs-stocktrend:
+	docker-compose logs -f stocktrend
 
-restart-actlog:
-	docker-compose stop actlog && docker-compose up -d actlog
+restart-stocktrend:
+	docker-compose stop stocktrend && docker-compose up -d stocktrend
 
 
 ## dsdgen
