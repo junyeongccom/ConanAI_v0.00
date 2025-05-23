@@ -28,6 +28,7 @@ services:
       - app-network
 
   stocktrend:
+    container_name: stocktrend
     build:
       context: ./stocktrend_service
       dockerfile: Dockerfile

@@ -3,10 +3,7 @@ from typing import Optional
 import os
 from icecream import ic
 
-class StocktrendService:
-    async def get_hello(self):
-        return {"message": "Hello World"}
-
+class ReportService:
     async def process_pdf(self, file: UploadFile, description: Optional[str] = None):
         """
         Process the uploaded PDF file
@@ -49,4 +46,4 @@ class StocktrendService:
             return {
                 "status": "error",
                 "message": f"Failed to process PDF: {str(e)}"
-            }
+            } 
