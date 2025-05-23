@@ -7,7 +7,7 @@
 ```
 SKYC/
 ├── gateway_service/     # API Gateway (8080)
-├── actlog_service/      # 활동 로그 관리 서비스 (8081)
+├── stocktrend_service/  # 주식 트렌드 분석 서비스 (8082)
 ├── company_service/     # 기업 관리 서비스 (8083)
 ├── esgdsd_service/      # ESG DSD 생성 서비스 (8084)
 ├── dsdgen_service/      # 재무상태표 DSD 생성 서비스 (8085)
@@ -67,7 +67,7 @@ make logs-user
 ## 서비스별 포트
 
 - Gateway Service: 8080
-- ActLog Service: 8081
+- StockTrend Service: 8082
 - Company Service: 8083
 - ESGDSD Service: 8084
 - DSDGen Service: 8085
@@ -78,7 +78,7 @@ make logs-user
 
 각 서비스의 API 문서는 다음 URL에서 확인할 수 있습니다:
 - http://localhost:8080/docs (Gateway Service)
-- http://localhost:8081/docs (ActLog Service)
+- http://localhost:8082/docs (StockTrend Service)
 - http://localhost:8083/docs (Company Service)
 - http://localhost:8084/docs (ESGDSD Service)
 - http://localhost:8085/docs (DSDGen Service)
