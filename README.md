@@ -13,6 +13,7 @@ SKYC/
 ├── dsdgen_service/      # 재무상태표 DSD 생성 서비스 (8085)
 ├── user_service/        # 사용자 관리 서비스 (8086)
 ├── xbrlgen_service/     # XBRL 문서 생성 서비스 (8087)
+├── n8n_service/         # n8n 워크플로우 자동화 서비스 (8088)
 ├── docker-compose.yml   # 전체 서비스 배포 설정
 └── Makefile            # 서비스별 빌드 및 실행 명령어
 ```
@@ -73,6 +74,7 @@ make logs-user
 - DSDGen Service: 8085
 - User Service: 8086
 - XBRLGen Service: 8087
+- N8N Service: 8088
 
 ## API 문서
 
@@ -84,6 +86,7 @@ make logs-user
 - http://localhost:8085/docs (DSDGen Service)
 - http://localhost:8086/docs (User Service)
 - http://localhost:8087/docs (XBRLGen Service)
+- http://localhost:8088/docs (N8N Service)
 
 ## 개발 가이드
 

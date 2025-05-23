@@ -148,4 +148,20 @@ logs-chatbot:
 restart-chatbot:
 	docker-compose stop chatbot && docker-compose up -d chatbot
 
+## n8n
+n8n_build:
+	docker-compose build n8n
+
+n8n_up:
+	docker-compose up -d n8n
+
+n8n_down:
+	docker-compose stop n8n
+
+n8n_logs:
+	docker-compose logs -f n8n
+
+n8n_restart:
+	docker-compose stop n8n && docker-compose up -d n8n
+
 
