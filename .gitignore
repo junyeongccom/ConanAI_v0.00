@@ -25,6 +25,13 @@ venv/
 env/
 ENV/
 .env
+**/.env
+
+# Environment and config files
+.env
+**/.env
+.cursor/mcp.json
+stocktrend_service/.cursor/mcp.json
 
 # IDE
 .idea/
