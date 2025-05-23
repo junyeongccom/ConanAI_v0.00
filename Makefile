@@ -34,38 +34,6 @@ logs-gateway:
 restart-gateway:
 	docker-compose stop gateway && docker-compose up -d gateway
 
-## user
-build-user:
-	docker-compose build user
-
-up-user:
-	docker-compose up -d user
-
-down-user:
-	docker-compose stop user
-
-logs-user:
-	docker-compose logs -f user
-
-restart-user:
-	docker-compose stop user && docker-compose up -d user
-
-## company
-build-company:
-	docker-compose build company
-
-up-company:
-	docker-compose up -d company
-
-down-company:
-	docker-compose stop company
-
-logs-company:
-	docker-compose logs -f company
-
-restart-company:
-	docker-compose stop company && docker-compose up -d company
-
 ## stocktrend
 build-stocktrend:
 	docker-compose build stocktrend
@@ -98,23 +66,6 @@ logs-dsdgen:
 
 restart-dsdgen:
 	docker-compose stop dsdgen && docker-compose up -d dsdgen
-
-
-## xbrlgen
-build-xbrlgen:
-	docker-compose build xbrlgen
-
-up-xbrlgen:
-	docker-compose up -d xbrlgen
-
-down-xbrlgen:
-	docker-compose stop xbrlgen
-
-logs-xbrlgen:
-	docker-compose logs -f xbrlgen
-
-restart-xbrlgen:
-	docker-compose stop xbrlgen && docker-compose up -d xbrlgen
 
 ## esgdsd
 build-esgdsd:
