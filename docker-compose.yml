@@ -83,17 +83,6 @@ services:
     networks:
       - app-network
 
-  n8n:
-    build:
-      context: ./n8n_service
-      dockerfile: Dockerfile
-    ports:
-      - "8088:8088"
-    env_file:
-      - ./n8n_service/.env
-    networks:
-      - app-network
-
 volumes:
   pgdata:
 

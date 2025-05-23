@@ -33,7 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록
+# 라우터 등록 ###
 app.include_router(chatbot_router, prefix="/api/chatbot", tags=["chatbot"])
 
 # 직접 실행 시 Uvicorn 서버로 실행
