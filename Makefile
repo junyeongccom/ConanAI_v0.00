@@ -32,7 +32,7 @@ logs-gateway:
 	docker-compose logs -f gateway
 
 restart-gateway:
-	docker-compose stop gateway && docker-compose up -d gateway
+	docker-compose down gateway && docker-compose up -d --build gateway
 
 ## stocktrend
 build-stocktrend:
@@ -48,7 +48,7 @@ logs-stocktrend:
 	docker-compose logs -f stocktrend
 
 restart-stocktrend:
-	docker-compose stop stocktrend && docker-compose up -d stocktrend
+	docker-compose down stocktrend && docker-compose up -d --build stocktrend
 
 
 ## dsdgen
@@ -65,7 +65,7 @@ logs-dsdgen:
 	docker-compose logs -f dsdgen
 
 restart-dsdgen:
-	docker-compose stop dsdgen && docker-compose up -d dsdgen
+	docker-compose down dsdgen && docker-compose up -d --build dsdgen
 
 ## esgdsd
 build-esgdsd:
@@ -81,7 +81,7 @@ logs-esgdsd:
 	docker-compose logs -f esgdsd
 
 restart-esgdsd:
-	docker-compose stop esgdsd && docker-compose up -d esgdsd
+	docker-compose down esgdsd && docker-compose up -d --build esgdsd
 
 ## chatbot
 build-chatbot:
@@ -96,5 +96,3 @@ down-chatbot:
 logs-chatbot:
 	docker-compose logs -f chatbot
 
-restart-chatbot:
-	docker-compose stop chatbot && docker-compose up -d chatbot
