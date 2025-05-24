@@ -50,6 +50,21 @@ logs-stocktrend:
 restart-stocktrend:
 	docker-compose down stocktrend && docker-compose up -d --build stocktrend
 
+## irsummary
+build-irsummary:
+	docker-compose build irsummary
+
+up-irsummary:
+	docker-compose up -d irsummary
+
+down-irsummary:
+	docker-compose stop irsummary
+
+logs-irsummary:
+	docker-compose logs -f irsummary
+
+restart-irsummary:
+	docker-compose down irsummary && docker-compose up -d --build irsummary
 
 ## dsdgen
 build-dsdgen:

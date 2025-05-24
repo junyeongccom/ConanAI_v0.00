@@ -41,6 +41,19 @@ services:
     networks:
       - app-network
 
+  irsummary:
+    build:
+      context: ./irsummary_service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    env_file:
+      - ./irsummary_service/.env
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
   chatbot:
     build:
       context: ./chatbot-service
