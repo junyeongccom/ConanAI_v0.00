@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from app.api.irsummary_router import router as irsummary_router
@@ -15,6 +16,15 @@ app = FastAPI(
     title="IRSummary Service",
     description="IR 리포트 분석 및 요약 마이크로서비스",
     version="1.0.0"
+)
+
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # 프론트엔드 origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # 라우터 등록
