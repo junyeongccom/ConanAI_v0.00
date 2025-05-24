@@ -1,13 +1,10 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from ..domain.controller.stocktrend_controller import StocktrendController
+from ..domain.model.stocktrend_schema import GameCompanyResponse
 from typing import Optional
 
 router = APIRouter()
-
-@router.get("/hello")
-async def get_hello():
-    controller = StocktrendController()
-    return await controller.get_hello()
+controller = StocktrendController()
 
 @router.post("/report", summary="Upload PDF report")
 async def upload_report(
@@ -27,6 +24,21 @@ async def upload_report(
     if not file.content_type == "application/pdf":
         return {"error": "Only PDF files are allowed"}
     
-    controller = StocktrendController()
     result = await controller.process_report(file, description)
     return result
+
+@router.get("/stocks", 
+    response_model=GameCompanyResponse,
+    summary="게임 기업 주가 정보 조회",
+    description="국내외 주요 게임 기업들의 실시간 주가 정보와 공시내용을 조회합니다.")
+async def get_game_stocks():
+    """
+    국내외 게임 기업 주가 정보 통합 조회 API
+    
+    Returns:
+        GameCompanyResponse: 게임 기업 주가 정보 목록
+    """
+    try:
+        return await controller.get_game_stocks()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
