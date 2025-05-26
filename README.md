@@ -7,10 +7,11 @@
 ```
 SKYC/
 ├── gateway_service/     # API Gateway (8080)
-├── stocktrend_service/  # 주식 트렌드 분석 서비스 (8082)
+├── stocktrend_service/  # 주식 트렌드 분석 서비스 (8081)
 ├── irsummary_service/   # IR 리포트 분석 및 요약 서비스 (8083)
 ├── esgdsd_service/      # ESG DSD 생성 서비스 (8084)
 ├── dsdgen_service/      # 재무상태표 DSD 생성 서비스 (8085)
+├── dsdcheck_service/    # DSD 공시용 재무데이터 검증 서비스 (8086)
 ├── chatbot-service/     # 챗봇 서비스 (8082)
 ├── docker-compose.yml   # 전체 서비스 배포 설정
 └── Makefile            # 서비스별 빌드 및 실행 명령어
@@ -65,9 +66,14 @@ make up-gateway
 make build-irsummary
 make up-irsummary
 
+# DSD Check 서비스 실행
+make build-dsdcheck
+make up-dsdcheck
+
 # 특정 서비스 로그 확인
 make logs-gateway
 make logs-irsummary
+make logs-dsdcheck
 ```
 
 ## 서비스별 포트
@@ -77,6 +83,7 @@ make logs-irsummary
 - IRSummary Service: 8083
 - ESGDSD Service: 8084
 - DSDGen Service: 8085
+- DSDCheck Service: 8086
 - Chatbot Service: 8082
 
 ## API 문서
@@ -87,6 +94,7 @@ make logs-irsummary
 - http://localhost:8083/docs (IRSummary Service)
 - http://localhost:8084/docs (ESGDSD Service)
 - http://localhost:8085/docs (DSDGen Service)
+- http://localhost:8086/docs (DSDCheck Service)
 
 ## 서비스별 기능
 
@@ -116,6 +124,34 @@ make down-irsummary
 
 # 서비스 재시작
 make restart-irsummary
+```
+
+### DSDCheck Service (8086)
+DSD 공시용 재무데이터 엑셀 파일을 분석하여 검증 기능을 제공합니다:
+- 계정과목 간 합계 일치 여부 자동 검증
+- 전기 보고서와의 대사 (전년도와 수치 비교)
+- AI 기반 주석 추천 기능 (추후 연동 예정)
+
+**주요 기능:**
+- 엑셀 파일 업로드 및 파싱 (pandas, openpyxl)
+- 재무데이터 무결성 검증
+- 전년도 대비 변동사항 분석
+- 검증 결과 리포트 생성
+
+**실행 방법:**
+```bash
+# DSDCheck 서비스만 빌드 및 실행
+make build-dsdcheck
+make up-dsdcheck
+
+# 로그 확인
+make logs-dsdcheck
+
+# 서비스 중지
+make down-dsdcheck
+
+# 서비스 재시작
+make restart-dsdcheck
 ```
 
 ## 개발 가이드
@@ -158,6 +194,7 @@ make prod
 ```bash
 make logs-[service-name]
 make logs-irsummary
+make logs-dsdcheck
 ```
 
 ## 라이센스
