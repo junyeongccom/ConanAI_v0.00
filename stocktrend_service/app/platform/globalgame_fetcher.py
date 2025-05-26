@@ -1,6 +1,6 @@
 import yfinance as yf
 from typing import List, Dict
-from ..model.stocktrend_schema import GameCompanyInfo
+from ..domain.model.stocktrend_schema import GameCompanyInfo
 import logging
 from datetime import datetime, timedelta
 
