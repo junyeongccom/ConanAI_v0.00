@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 from fastapi import UploadFile
 
 from app.platform.dart_client import DartClient
@@ -8,8 +8,11 @@ from app.foundation.preprocess_excel_data import parse_financial_excel
 from app.domain.model.dsdcheck_schema import (
     FinancialDataRequest, 
     FinancialDataResponse,
-    FinancialExcelResponse
+    FinancialExcelResponse,
+    FinancialStatement,
+    ComparisonResult
 )
+from app.foundation.compare_logic import compare_statements
 
 logger = logging.getLogger(__name__)
 
@@ -105,3 +108,9 @@ class DsdCheckService:
         except Exception as e:
             logger.error(f"엑셀 파싱 서비스 오류: {e}")
             return None
+
+def compare_excel_and_dart_statements(
+    excel_statements: List[FinancialStatement], 
+    dart_statements: List[FinancialStatement]
+) -> List[ComparisonResult]:
+    return compare_statements(excel_statements, dart_statements)

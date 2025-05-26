@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, HTTPException, UploadFile, File, Form
 from app.domain.controller.dsdcheck_controller import DsdCheckController
-from app.domain.model.dsdcheck_schema import FinancialDataResponse, FinancialExcelResponse
+from app.domain.model.dsdcheck_schema import FinancialDataResponse, FinancialExcelResponse, ComparisonResult
 
 router = APIRouter()
 controller = DsdCheckController()
@@ -93,5 +93,13 @@ async def upload_excel_file(
         )
     
     return response
+
+@router.post("/compare", response_model=list[ComparisonResult])
+async def compare_excel_and_dart(
+    file: UploadFile = File(...),
+    corp_name: str = Form(...),
+    year: int = Form(...)
+):
+    return await controller.compare_excel_to_dart(file, corp_name, year)
 
 

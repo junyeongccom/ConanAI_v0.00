@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
 from fastapi import UploadFile
 
@@ -89,3 +89,13 @@ class SheetMapping(BaseModel):
     title: str
     fs_div: str  # CFS 또는 OFS
     sj_div: str  # BS, IS, CIS, CF, SCE
+
+
+class ComparisonResult(BaseModel):
+    fs_div: str
+    sj_div: str
+    account_nm: str
+    column: Literal["thstrm_amount", "frmtrm_amount"]
+    excel: str
+    dart: str
+    diff: int
