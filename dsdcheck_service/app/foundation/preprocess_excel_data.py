@@ -4,6 +4,8 @@ from typing import List, Dict, Optional, Tuple
 import logging
 from fastapi import UploadFile
 from io import BytesIO
+from datetime import datetime
+import openpyxl
 
 from app.domain.model.dsdcheck_schema import (
     FinancialStatementFromExcel,
@@ -201,86 +203,80 @@ def extract_corp_info_from_excel(excel_file: BytesIO) -> Tuple[Optional[str], Op
 
 def clean_amount_value(value) -> str:
     """
-    금액 값을 정리하여 문자열로 변환
-    
+    금액 값을 정리하여 문자열로 변환 (음수 부호 보존)
     Args:
         value: 원본 값
-        
     Returns:
-        정리된 문자열 (쉼표 제거, 숫자만)
+        정리된 문자열 (쉼표 제거, 숫자만, 음수 부호는 맨 앞에만 허용)
     """
     if pd.isna(value) or value == "" or value == "-":
         return "0"
-    
-    # 문자열로 변환
-    str_value = str(value)
-    
-    # 쉼표 제거 및 숫자만 추출
+    str_value = str(value).strip()
+    is_negative = str_value.startswith("-")
+    # 숫자만 추출
     cleaned = re.sub(r'[^\d]', '', str_value)
-    
-    return cleaned if cleaned else "0"
+    if cleaned == "":
+        return "0"
+    return f"-{cleaned}" if is_negative else cleaned
 
 
-def extract_financial_data_from_sheet(excel_file: BytesIO, sheet_mapping: SheetMapping) -> Optional[FinancialStatementFromExcel]:
+def extract_general_financial_data_from_sheet(excel_file: BytesIO, sheet_mapping: SheetMapping) -> Optional[FinancialStatementFromExcel]:
     """
-    특정 시트에서 재무데이터를 추출
-    
-    Args:
-        excel_file: 엑셀 파일 BytesIO 객체
-        sheet_mapping: 시트 매핑 정보
-        
-    Returns:
-        추출된 재무제표 데이터 또는 None
+    BS/IS/CF 시트에서 재무데이터를 추출
     """
     try:
-        df = pd.read_excel(excel_file, sheet_name=sheet_mapping.sheet_name, engine='openpyxl')
-        
+        df = pd.read_excel(excel_file, sheet_name=sheet_mapping.sheet_name, engine='openpyxl', header=None, skiprows=4)
         if df.empty:
             logger.warning(f"빈 시트: {sheet_mapping.sheet_name}")
             return None
-        
-        # 데이터 정리
-        df = df.dropna(how='all')  # 모든 값이 NaN인 행 제거
-        
-        # 첫 번째 열을 계정명으로 사용
+        df = df.dropna(how='all')
+        df.columns = df.iloc[0]
+        df = df[1:]
         account_col = df.columns[0]
-        
-        # 날짜 형식의 컬럼 찾기 (2023-12-31, 2022-12-31 형태)
         date_columns = []
-        for col in df.columns[1:]:  # 첫 번째 열 제외
+        for col in df.columns[1:]:
+            col_val = col
             col_str = str(col)
-            if re.match(r'\d{4}-\d{2}-\d{2}', col_str):
-                date_columns.append(col)
-        
-        # 최신 2개 연도 컬럼만 사용 (2024 제외하고 2023, 2022 사용)
-        date_columns = sorted(date_columns, reverse=True)  # 최신순 정렬
+            if isinstance(col, datetime):
+                date_columns.append(col_val)
+                logger.debug(f"날짜 컬럼 발견 (datetime): {col_val}")
+                continue
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", col_str):
+                try:
+                    parsed_date = datetime.strptime(col_str, "%Y-%m-%d")
+                    date_columns.append(col_val)
+                    logger.debug(f"날짜 컬럼 발견 (string): {col_val} -> {parsed_date}")
+                except ValueError:
+                    logger.debug(f"날짜 파싱 실패: {col_str}")
+                    continue
+            try:
+                parsed = pd.to_datetime(col_str[:10], format="%Y-%m-%d", errors="raise")
+                if col_val not in date_columns:
+                    date_columns.append(col_val)
+                    logger.debug(f"날짜 컬럼 발견 (pd.to_datetime): {col_val} -> {parsed}")
+            except Exception:
+                pass
+        date_columns = sorted(date_columns, reverse=True)
         if len(date_columns) >= 3:
-            # 2024년 제외하고 2023, 2022 사용
-            thstrm_col = date_columns[1]  # 2023 (당기)
-            frmtrm_col = date_columns[2]  # 2022 (전기)
+            thstrm_col = date_columns[1]
+            frmtrm_col = date_columns[2]
         elif len(date_columns) >= 2:
-            thstrm_col = date_columns[0]  # 최신
-            frmtrm_col = date_columns[1]  # 그 다음
+            thstrm_col = date_columns[0]
+            frmtrm_col = date_columns[1]
         else:
             logger.warning(f"충분한 날짜 컬럼이 없습니다: {sheet_mapping.sheet_name}")
             return None
-        
-        # 데이터 추출
         items = []
         for idx, row in df.iterrows():
             account_nm = str(row[account_col]) if pd.notna(row[account_col]) else ""
-            
-            # 계정명이 유효한 경우만 처리
             if account_nm and account_nm.strip() and not account_nm.startswith('Unnamed'):
                 thstrm_amount = clean_amount_value(row[thstrm_col])
                 frmtrm_amount = clean_amount_value(row[frmtrm_col])
-                
                 items.append(FinancialStatementItem(
                     account_nm=account_nm.strip(),
                     thstrm_amount=thstrm_amount,
                     frmtrm_amount=frmtrm_amount
                 ))
-        
         if items:
             logger.info(f"데이터 추출 완료: {sheet_mapping.sheet_name}, {len(items)}개 항목")
             return FinancialStatementFromExcel(
@@ -288,11 +284,89 @@ def extract_financial_data_from_sheet(excel_file: BytesIO, sheet_mapping: SheetM
                 sj_div=sheet_mapping.sj_div,
                 items=items
             )
-        
     except Exception as e:
         logger.error(f"시트 데이터 추출 오류 ({sheet_mapping.sheet_name}): {e}")
-    
     return None
+
+
+def extract_sce_data_from_sheet(excel_file: BytesIO, sheet_mapping: SheetMapping) -> Optional[FinancialStatementFromExcel]:
+    """
+    자본변동표(SCE) 시트에서 2023년은 thstrm, 2022년은 frmtrm으로 매핑하여 반환
+    """
+    try:
+        excel_file.seek(0)
+        df = pd.read_excel(excel_file, sheet_name=sheet_mapping.sheet_name, engine='openpyxl', header=None, skiprows=4)
+        df = df.dropna(how='all')
+        df = df.reset_index(drop=True)
+        period_row_indices = []
+        period_years = []
+        for i, val in enumerate(df.iloc[:, 0]):
+            if isinstance(val, str):
+                m = re.search(r"(\d{4})-\d{2}-\d{2}\s*~\s*(\d{4})-\d{2}-\d{2}", val)
+                if m and m.group(1) == m.group(2):
+                    year = m.group(1)
+                    if year in ["2023", "2022"]:
+                        period_row_indices.append(i)
+                        period_years.append(year)
+        col_priority = [2, 6, 5, 1, 4, 3]
+        thstrm_block, frmtrm_block = None, None
+        for idx, start_row in enumerate(period_row_indices):
+            end_row = period_row_indices[idx+1] if idx+1 < len(period_row_indices) else len(df)
+            block = df.iloc[start_row+1:end_row]
+            if period_years[idx] == "2023":
+                thstrm_block = block
+            elif period_years[idx] == "2022":
+                frmtrm_block = block
+        results = []
+        if thstrm_block is not None and frmtrm_block is not None:
+            max_rows = max(len(thstrm_block), len(frmtrm_block))
+            for row_idx in range(max_rows):
+                thstrm_row = thstrm_block.iloc[row_idx] if row_idx < len(thstrm_block) else None
+                frmtrm_row = frmtrm_block.iloc[row_idx] if row_idx < len(frmtrm_block) else None
+                account_nm = str(thstrm_row.iloc[0]).strip() if thstrm_row is not None and not pd.isna(thstrm_row.iloc[0]) else (
+                    str(frmtrm_row.iloc[0]).strip() if frmtrm_row is not None and not pd.isna(frmtrm_row.iloc[0]) else ""
+                )
+                if not account_nm or account_nm == 'nan':
+                    continue
+                for col_idx in col_priority:
+                    thstrm_amount = "0"
+                    frmtrm_amount = "0"
+                    if thstrm_row is not None and col_idx < len(thstrm_row):
+                        val = thstrm_row.iloc[col_idx]
+                        thstrm_amount = clean_amount_value(val) if not pd.isna(val) and str(val).strip() != '' else "0"
+                    if frmtrm_row is not None and col_idx < len(frmtrm_row):
+                        val = frmtrm_row.iloc[col_idx]
+                        frmtrm_amount = clean_amount_value(val) if not pd.isna(val) and str(val).strip() != '' else "0"
+                    results.append({
+                        "account_nm": account_nm,
+                        "thstrm_amount": thstrm_amount,
+                        "frmtrm_amount": frmtrm_amount
+                    })
+        if results:
+            logger.info(f"자본변동표 2023(thstrm)/2022(frmtrm) 데이터 추출 완료: {sheet_mapping.sheet_name}, {len(results)}개 항목")
+            return FinancialStatementFromExcel(
+                fs_div=sheet_mapping.fs_div,
+                sj_div=sheet_mapping.sj_div,
+                items=[
+                    FinancialStatementItem(
+                        account_nm=item["account_nm"],
+                        thstrm_amount=item["thstrm_amount"],
+                        frmtrm_amount=item["frmtrm_amount"]
+                    ) for item in results
+                ]
+            )
+        else:
+            logger.warning(f"자본변동표에서 2023/2022 데이터 항목을 찾지 못했습니다: {sheet_mapping.sheet_name}")
+    except Exception as e:
+        logger.warning(f"자본변동표 시트 파싱 오류 ({sheet_mapping.sheet_name}): {e}")
+    return None
+
+
+def extract_financial_data_from_sheet(excel_file: BytesIO, sheet_mapping: SheetMapping) -> Optional[FinancialStatementFromExcel]:
+    if sheet_mapping.sj_div == "SCE":
+        return extract_sce_data_from_sheet(excel_file, sheet_mapping)
+    else:
+        return extract_general_financial_data_from_sheet(excel_file, sheet_mapping)
 
 
 def parse_financial_excel(file: UploadFile) -> Tuple[List[FinancialStatementFromExcel], Optional[str], Optional[int]]:
