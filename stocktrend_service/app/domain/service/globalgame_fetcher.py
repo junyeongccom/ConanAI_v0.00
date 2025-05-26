@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 class GlobalGameFetcher:
     """해외 게임주 수집기"""
     
-    TICKERS = ["EA", "TTWO", "NTES", "RBLX", "TCEHY", "UBSFY", "NTDOY"]
+    TICKERS = ["EA", "TTWO", "NTES", "RBLX", "TCEHY", "UBSFY", "NTDOY", "NCBDY", "KNMCY", "SGAMY"]
     
     def format_market_cap(self, market_cap: float) -> str:
         """시가총액 포맷팅"""
