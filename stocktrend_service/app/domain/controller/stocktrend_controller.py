@@ -1,8 +1,8 @@
 from fastapi import UploadFile
 from typing import Optional, List
 from datetime import datetime
-from ..service.kgame_crawler import KGameCrawler
-from ..service.globalgame_fetcher import GlobalGameFetcher
+from ...platform.kgame_crawler import KGameCrawler
+from ...platform.globalgame_fetcher import GlobalGameFetcher
 from ..service.game_announcement_service import GameAnnouncementService
 from ..model.stocktrend_schema import GameCompanyInfo, GameCompanyResponse
 
