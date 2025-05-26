@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api.dsdfooting_router import router as dsdfooting_router
+from .api.dsdcheck_router import router as dsdcheck_router
 
 # 환경변수 로딩
 load_dotenv()
@@ -15,13 +16,9 @@ logging.basicConfig(
 )
 
 app = FastAPI(
-    
     title="재무제표 검증 서비스",
-    description="재무제표 엑셀 파일의 합계검증을 수행하는 API 서비스",
-    
     version="1.0.0",
     description="DSD 공시용 재무데이터 검증 서비스"
-
 )
 
 # CORS 설정
@@ -35,6 +32,7 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(dsdfooting_router)
+app.include_router(dsdcheck_router, prefix="/api/dsdcheck")
 
 @app.get("/")
 async def root():
