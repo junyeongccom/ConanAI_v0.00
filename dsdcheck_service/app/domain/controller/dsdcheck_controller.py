@@ -29,16 +29,14 @@ class DsdCheckController:
         request = FinancialDataRequest(corp_name=corp_name, year=year)
         return await self.service.get_financial_data(request)
 
-    async def upload_excel_file(self, file: UploadFile, corp_name: str, year: int) -> Optional[FinancialExcelResponse]:
+    async def upload_excel_file(self, file: UploadFile) -> Optional[FinancialExcelResponse]:
         """
         업로드된 엑셀 파일에서 재무제표 데이터 추출
         
         Args:
             file: 업로드된 엑셀 파일
-            corp_name: 기업명
-            year: 기준연도
             
         Returns:
             파싱된 재무제표 응답 또는 None
         """
-        return await self.service.parse_uploaded_excel(file, corp_name, year)
+        return await self.service.parse_uploaded_excel(file)

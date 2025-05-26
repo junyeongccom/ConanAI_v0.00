@@ -53,16 +53,12 @@ async def get_financial_data(
 
 @router.post("/upload", response_model=FinancialExcelResponse)
 async def upload_excel_file(
-    file: UploadFile = File(..., description="재무제표 엑셀 파일"),
-    corp_name: str = Form(..., description="기업명", min_length=1),
-    year: int = Form(..., description="기준연도", ge=2000, le=2030)
+    file: UploadFile = File(..., description="재무제표 엑셀 파일")
 ):
     """
     업로드된 엑셀 파일에서 재무제표 데이터를 추출하고 전처리합니다.
     
     - **file**: 재무제표 엑셀 파일 (.xlsx 형식)
-    - **corp_name**: 기업명 (예: "LG화학", "삼성전자")
-    - **year**: 기준연도 (예: 2023, 2022)
     
     ## 처리 과정:
     1. Index 시트에서 재무제표 구분 정보 추출
@@ -86,11 +82,8 @@ async def upload_excel_file(
             detail="엑셀 파일(.xlsx 또는 .xls)만 업로드 가능합니다."
         )
     
-    # 입력값 정규화
-    corp_name = corp_name.strip()
-    
     # 컨트롤러 호출
-    response = await controller.upload_excel_file(file, corp_name, year)
+    response = await controller.upload_excel_file(file)
     
     # 결과 검증 및 예외 처리
     if not response:
