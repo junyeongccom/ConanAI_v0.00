@@ -1,5 +1,5 @@
 from typing import List
-from ..model.stocktrend_schema import GameCompanyInfo
+from ..domain.model.stocktrend_schema import GameCompanyInfo
 import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
