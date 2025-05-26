@@ -98,6 +98,22 @@ logs-esgdsd:
 restart-esgdsd:
 	docker-compose down esgdsd && docker-compose up -d --build esgdsd
 
+## dsdcheck
+build-dsdcheck:
+	docker-compose build dsdcheck
+
+up-dsdcheck:
+	docker-compose up -d dsdcheck
+
+down-dsdcheck:
+	docker-compose stop dsdcheck
+
+logs-dsdcheck:
+	docker-compose logs -f dsdcheck
+
+restart-dsdcheck:
+	docker-compose down dsdcheck && docker-compose up -d --build dsdcheck
+
 ## chatbot
 build-chatbot:
 	docker-compose build chatbot
@@ -110,4 +126,7 @@ down-chatbot:
 
 logs-chatbot:
 	docker-compose logs -f chatbot
+
+restart-chatbot:
+	docker-compose down chatbot && docker-compose up -d --build chatbot
 
