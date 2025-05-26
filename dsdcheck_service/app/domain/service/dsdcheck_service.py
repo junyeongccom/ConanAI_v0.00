@@ -72,23 +72,21 @@ class DsdCheckService:
             logger.error(f"재무제표 조회 서비스 오류: {e}")
             return None
 
-    async def parse_uploaded_excel(self, file: UploadFile, corp_name: str, year: int) -> Optional[FinancialExcelResponse]:
+    async def parse_uploaded_excel(self, file: UploadFile) -> Optional[FinancialExcelResponse]:
         """
         업로드된 엑셀 파일에서 재무제표 데이터를 파싱하고 전처리
         
         Args:
             file: 업로드된 엑셀 파일
-            corp_name: 기업명
-            year: 기준연도
             
         Returns:
             파싱된 재무제표 응답 또는 None
         """
         try:
-            logger.info(f"엑셀 파일 파싱 시작: {corp_name}, {year}, 파일명: {file.filename}")
+            logger.info(f"엑셀 파일 파싱 시작: 파일명: {file.filename}")
             
             # 1. 엑셀 파일 파싱
-            statements = parse_financial_excel(file)
+            statements, corp_name, year = parse_financial_excel(file)
             
             if not statements:
                 logger.error("엑셀 파일에서 재무제표 데이터를 추출할 수 없습니다.")
@@ -96,8 +94,8 @@ class DsdCheckService:
             
             # 2. 최종 응답 생성
             response = FinancialExcelResponse(
-                corp_name=corp_name,
-                year=year,
+                corp_name=corp_name or "업로드된 엑셀 기반 추정값",
+                year=year or 2023,
                 statements=statements
             )
             
