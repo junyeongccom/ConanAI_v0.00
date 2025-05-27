@@ -2,19 +2,19 @@
 
 이 프로젝트는 마이크로서비스 아키텍처를 기반으로 한 SKYC 시스템입니다.
 
-## 프로젝트 구조
+## 📁 프로젝트 구조
 
 ```
-SKYC/
-├── gateway_service/     # API Gateway (8080)
-├── stocktrend_service/  # 주식 트렌드 분석 서비스 (8081)
-├── irsummary_service/   # IR 리포트 분석 및 요약 서비스 (8083)
-├── esgdsd_service/      # ESG DSD 생성 서비스 (8084)
-├── dsdgen_service/      # 재무상태표 DSD 생성 서비스 (8085)
-├── dsdcheck_service/    # DSD 공시용 재무데이터 검증 서비스 (8086)
-├── chatbot-service/     # 챗봇 서비스 (8082)
-├── docker-compose.yml   # 전체 서비스 배포 설정
-└── Makefile            # 서비스별 빌드 및 실행 명령어
+api-server/
+├── chatbot/             # 챗봇 서비스 (8082)
+├── dsdcheck/            # DSD 공시용 재무데이터 검증 서비스 (8086)
+├── dsdgen/              # DSD 공시용 재무데이터 생성 서비스 (8085)
+├── esgdsd/              # ESG DSD 서비스 (8084)
+├── gateway/             # API 게이트웨이 (8080)
+├── irsummary/           # IR 요약 서비스 (8083)
+├── stocktrend/          # 주식 트렌드 서비스 (8081)
+├── docker-compose.yml   # 도커 컴포즈 설정
+└── README.md
 ```
 
 ## 기술 스택

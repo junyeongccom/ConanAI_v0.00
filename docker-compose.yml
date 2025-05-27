@@ -16,12 +16,12 @@ services:
 
   gateway:
     build:
-      context: ./gateway_service
+      context: ./gateway
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     env_file:
-      - ./gateway_service/.env
+      - ./gateway/.env
     depends_on:
       - postgres
     networks:
@@ -30,14 +30,14 @@ services:
   stocktrend:
     container_name: stocktrend
     build:
-      context: ./stocktrend_service
+      context: ./stocktrend
       dockerfile: Dockerfile
     volumes:
-      - ./stocktrend_service:/app
+      - ./stocktrend:/app
     ports:
       - "8081:8081"
     env_file:
-      - ./stocktrend_service/.env
+      - ./stocktrend/.env
     depends_on:
       - postgres
     networks:
@@ -45,12 +45,12 @@ services:
 
   irsummary:
     build:
-      context: ./irsummary_service
+      context: ./irsummary
       dockerfile: Dockerfile
     ports:
       - "8083:8083"
     env_file:
-      - ./irsummary_service/.env
+      - ./irsummary/.env
     depends_on:
       - postgres
     networks:
@@ -58,12 +58,12 @@ services:
 
   chatbot:
     build:
-      context: ./chatbot-service
+      context: ./chatbot
       dockerfile: Dockerfile
     ports:
       - "8082:8082"
     env_file:
-      - ./chatbot-service/.env
+      - ./chatbot/.env
     depends_on:
       - postgres
     networks:
@@ -71,14 +71,14 @@ services:
 
   esgdsd:
     build:
-      context: ./esgdsd_service
+      context: ./esgdsd
       dockerfile: Dockerfile
     ports:
       - "8084:8084"
     volumes:
-      - ./esgdsd_service:/app
+      - ./esgdsd:/app
     env_file:
-      - ./esgdsd_service/.env
+      - ./esgdsd/.env
     depends_on:
       - postgres
     networks:
@@ -86,12 +86,12 @@ services:
 
   dsdgen:
     build:
-      context: ./dsdgen_service
+      context: ./dsdgen
       dockerfile: Dockerfile
     ports:
       - "8085:8085"
     env_file:
-      - ./dsdgen_service/.env
+      - ./dsdgen/.env
     depends_on:
       - postgres
     volumes:
@@ -101,14 +101,14 @@ services:
 
   dsdcheck:
     build:
-      context: ./dsdcheck_service
+      context: ./dsdcheck
       dockerfile: Dockerfile
     ports:
       - "8086:8086"
     volumes:
-      - ./dsdcheck_service/app/resources:/app/app/resources
+      - ./dsdcheck/app/resources:/app/app/resources
     env_file:
-      - ./dsdcheck_service/.env
+      - ./dsdcheck/.env
     depends_on:
       - postgres
     networks:
