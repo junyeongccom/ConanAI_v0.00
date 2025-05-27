@@ -10,3 +10,5 @@ psql -U hc_user -d hc_db
 
 #컬럼확인
 \d dsd_source
+
+이히리오

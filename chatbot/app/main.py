@@ -34,7 +34,7 @@ app.add_middleware(
 )
 
 # 라우터 등록 ###
-app.include_router(chatbot_router, prefix="/api/chatbot", tags=["chatbot"])
+app.include_router(chatbot_router, tags=["chatbot"])
 
 # 직접 실행 시 Uvicorn 서버로 실행
 if __name__ == "__main__":

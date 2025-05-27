@@ -32,7 +32,7 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(dsdfooting_router)
-app.include_router(dsdcheck_router, prefix="/api/dsdcheck")
+app.include_router(dsdcheck_router)
 
 @app.get("/")
 async def root():
