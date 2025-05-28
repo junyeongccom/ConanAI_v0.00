@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import List, Dict, Any, Tuple
-from app.domain.model.dsdfooting_schema import FootingResultItem, FootingSheetResult, FootingResponse
+from app.domain.model.dsdfooting_schema import FootingResultItem, FootingSheetResult, FootingResponse, YearlyFootingSheetResult
 from app.domain.model.validation_rules import VALIDATION_RULES
 import logging
 from io import BytesIO
@@ -22,16 +22,18 @@ class DSDFootingService:
         "D610005": "자본변동표 - 별도"
     }
 
-    def _preprocess_dataframe(self, sheet_name: str, xls: pd.ExcelFile) -> pd.DataFrame:
+    def _preprocess_dataframe(self, sheet_name: str, xls: pd.ExcelFile) -> Dict[str, pd.DataFrame]:
         """
-        엑셀 시트를 DataFrame으로 읽고 전처리
+        엑셀 시트를 연도별 DataFrame으로 읽고 전처리
         
         Args:
             sheet_name (str): 시트명
             xls (pd.ExcelFile): 엑셀 파일 객체
             
         Returns:
-            pd.DataFrame: 전처리된 DataFrame (항목명, 금액 컬럼 포함)
+            Dict[str, pd.DataFrame]: 연도별로 전처리된 DataFrame
+                - key: 연도(str)
+                - value: DataFrame (항목명, 금액 컬럼 포함)
             
         Raises:
             ValueError: 유효한 컬럼을 찾을 수 없는 경우
@@ -43,45 +45,68 @@ class DSDFootingService:
             if len(df.columns) < 2:
                 raise ValueError("Sheet must have at least 2 columns")
             
-            # 첫 번째, 두 번째 열만 선택
-            df = df.iloc[:, :2]
-            df.columns = ['항목명', '금액']
+            # 첫 번째 열은 항목명
+            item_col = df.iloc[:, 0]
             
-            # 항목명 전처리
-            df['항목명'] = df['항목명'].astype(str).str.strip()
+            # 항목명 전처리 (ffill로 병합셀 처리)
+            item_col = item_col.astype(str).str.strip()
+            item_col = item_col.replace('', pd.NA).ffill()
             
-            # 금액 컬럼 전처리
-            df['금액'] = (df['금액']
-                       .astype(str)
-                       .str.replace(',', '')  # 쉼표 제거
-                       .str.replace('−', '-')  # 전각 마이너스를 하이픈으로
-                       .str.replace('(', '-')  # 괄호로 표시된 음수 처리
-                       .str.replace(')', '')
-                       .str.strip())
+            # 연도별 데이터프레임 생성
+            year_dfs = {}
             
-            # 숫자로 변환 (빈 문자열은 NaN으로)
-            df['금액'] = pd.to_numeric(df['금액'], errors='coerce')
+            # 두 번째 열부터 연도별 데이터 처리
+            for col_idx in range(1, len(df.columns)):
+                # 첫 행에서 연도 추출 시도
+                year = str(df.iloc[0, col_idx]).strip()
+                if not year or not year.isdigit() or len(year) != 4:
+                    continue
+                
+                # 해당 연도의 금액 데이터 추출
+                amount_col = df.iloc[:, col_idx]
+                
+                # 금액 전처리
+                amount_col = (amount_col
+                           .astype(str)
+                           .str.replace(',', '')  # 쉼표 제거
+                           .str.replace('−', '-')  # 전각 마이너스를 하이픈으로
+                           .str.replace('(', '-')  # 괄호로 표시된 음수 처리
+                           .str.replace(')', '')
+                           .str.strip())
+                
+                # 숫자로 변환 (빈 문자열은 NaN으로)
+                amount_col = pd.to_numeric(amount_col, errors='coerce')
+                
+                # 연도별 DataFrame 생성
+                year_df = pd.DataFrame({
+                    '항목명': item_col,
+                    '금액': amount_col
+                })
+                
+                # 유효한 행만 필터링
+                # - 항목명이 비어있지 않고
+                # - 금액이 숫자인 행만 선택
+                year_df = year_df[
+                    year_df['항목명'].str.len() > 0 & 
+                    year_df['금액'].notna()
+                ].copy()
+                
+                if len(year_df) > 0:
+                    year_dfs[year] = year_df
             
-            # 유효한 행만 필터링
-            # - 항목명이 비어있지 않고
-            # - 금액이 숫자인 행만 선택
-            df = df[
-                df['항목명'].str.len() > 0 & 
-                df['금액'].notna()
-            ].copy()
-            
-            if len(df) == 0:
-                raise ValueError("No valid data found after preprocessing")
+            if not year_dfs:
+                raise ValueError("No valid year data found after preprocessing")
             
             # 전처리 결과 로깅
-            logging.info(
-                f"\n📑 Sheet [{sheet_name}] Preprocessing Result:\n"
-                f"✅ Total rows: {len(df)}\n"
-                f"📋 Sample items (first 5):\n{df['항목명'].head().tolist()}\n"
-                f"💰 Sample amounts (first 5):\n{df['금액'].head().apply(lambda x: f'{x:,.0f}').tolist()}"
-            )
+            for year, df in year_dfs.items():
+                logging.info(
+                    f"\n📑 Sheet [{sheet_name}] Year [{year}] Preprocessing Result:\n"
+                    f"✅ Total rows: {len(df)}\n"
+                    f"📋 Sample items (first 5):\n{df['항목명'].head().tolist()}\n"
+                    f"💰 Sample amounts (first 5):\n{df['금액'].head().apply(lambda x: f'{x:,.0f}').tolist()}"
+                )
             
-            return df
+            return year_dfs
             
         except Exception as e:
             logging.warning(
@@ -104,15 +129,28 @@ class DSDFootingService:
                 for sheet_name in xls.sheet_names:
                     if sheet_name in self.SHEET_TITLES:
                         try:
-                            # 데이터프레임 전처리
-                            df = self._preprocess_dataframe(sheet_name, xls)
+                            # 연도별 데이터프레임 전처리
+                            year_dfs = self._preprocess_dataframe(sheet_name, xls)
                             
-                            # 검증 수행
-                            sheet_result = self._validate_sheet(sheet_name, df)
+                            # 연도별 검증 결과 저장
+                            year_results = {}
+                            
+                            # 각 연도별로 검증 수행
+                            for year, df in year_dfs.items():
+                                # 검증 수행
+                                validation_results = self._validate_sheet(sheet_name, df)
+                                year_results[year] = validation_results
+                                
+                                # 불일치 항목 카운트
+                                mismatch_count += sum(1 for r in validation_results if not r.is_match)
+                            
+                            # 연도별 결과를 하나의 시트 결과로 통합
+                            sheet_result = YearlyFootingSheetResult(
+                                sheet=sheet_name,
+                                title=self.SHEET_TITLES[sheet_name],
+                                results_by_year=year_results
+                            )
                             results.append(sheet_result)
-                            
-                            # 불일치 항목 카운트
-                            mismatch_count += sum(1 for r in sheet_result.results if not r.is_match)
                             processed_sheets += 1
                             
                         except ValueError as e:
@@ -140,15 +178,24 @@ class DSDFootingService:
             logging.error(f"❌ Failed to process excel file: {str(e)}")
             raise ValueError(f"Invalid excel file format: {str(e)}")
 
-    def _validate_sheet(self, sheet_code: str, df: pd.DataFrame) -> FootingSheetResult:
-        """개별 시트 검증"""
+    def _validate_sheet(self, sheet_code: str, df: pd.DataFrame) -> List[FootingResultItem]:
+        """
+        개별 시트 검증
+        
+        Args:
+            sheet_code (str): 시트 코드
+            df (pd.DataFrame): 검증할 데이터프레임
+            
+        Returns:
+            List[FootingResultItem]: 검증 결과 목록
+        """
         title = self.SHEET_TITLES[sheet_code]
         sheet_type = next((type_name for type_name in VALIDATION_RULES.keys() 
                          if type_name in title), None)
         
         if not sheet_type:
             logging.warning(f"❌ No validation rules found for sheet: {title}")
-            return FootingSheetResult(sheet=sheet_code, title=title, results=[])
+            return []
             
         rules = VALIDATION_RULES[sheet_type]
         results = []
@@ -191,11 +238,7 @@ class DSDFootingService:
                 result = self._check_sum(df, parent, children, rules)
                 results.append(result)
         
-        return FootingSheetResult(
-            sheet=sheet_code,
-            title=title,
-            results=results
-        )
+        return results
 
     def _check_special_rules(self, df: pd.DataFrame, special_rules: Dict) -> List[FootingResultItem]:
         """특수 검증 규칙 처리"""
