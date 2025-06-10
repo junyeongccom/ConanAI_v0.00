@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import List, Dict, Any, Tuple
-from app.domain.model.dsdfooting_schema import FootingResultItem, FootingSheetResult, FootingResponse, YearlyFootingSheetResult
+from app.domain.model.dsdfooting_schema import FootingResultItem, FootingResponse, YearlyFootingSheetResult
 from app.domain.model.validation_rules import VALIDATION_RULES
 import logging
 from io import BytesIO
@@ -32,7 +32,7 @@ class DSDFootingService:
             
         Returns:
             Dict[str, pd.DataFrame]: 연도별로 전처리된 DataFrame
-                - key: 연도(str)
+                - key: "YYYY-12-31" 형태의 연도 문자열
                 - value: DataFrame (항목명, 금액 컬럼 포함)
             
         Raises:
@@ -45,7 +45,7 @@ class DSDFootingService:
             if len(df.columns) < 2:
                 raise ValueError("Sheet must have at least 2 columns")
             
-            # 첫 번째 열은 항목명
+            # A열: 항목명 (첫 번째 열)
             item_col = df.iloc[:, 0]
             
             # 항목명 전처리 (ffill로 병합셀 처리)
@@ -55,56 +55,109 @@ class DSDFootingService:
             # 연도별 데이터프레임 생성
             year_dfs = {}
             
-            # 두 번째 열부터 연도별 데이터 처리
-            for col_idx in range(1, len(df.columns)):
-                # 첫 행에서 연도 추출 시도
-                year = str(df.iloc[0, col_idx]).strip()
-                if not year or not year.isdigit() or len(year) != 4:
-                    continue
+            # D210000 시트의 경우 B, C, D열을 각각 2024, 2023, 2022년으로 처리
+            if sheet_name == "D210000":
+                year_mapping = {
+                    1: "2024",  # B열 (인덱스 1) = 2024년
+                    2: "2023",  # C열 (인덱스 2) = 2023년
+                    3: "2022"   # D열 (인덱스 3) = 2022년
+                }
                 
-                # 해당 연도의 금액 데이터 추출
-                amount_col = df.iloc[:, col_idx]
-                
-                # 금액 전처리
-                amount_col = (amount_col
-                           .astype(str)
-                           .str.replace(',', '')  # 쉼표 제거
-                           .str.replace('−', '-')  # 전각 마이너스를 하이픈으로
-                           .str.replace('(', '-')  # 괄호로 표시된 음수 처리
-                           .str.replace(')', '')
-                           .str.strip())
-                
-                # 숫자로 변환 (빈 문자열은 NaN으로)
-                amount_col = pd.to_numeric(amount_col, errors='coerce')
-                
-                # 연도별 DataFrame 생성
-                year_df = pd.DataFrame({
-                    '항목명': item_col,
-                    '금액': amount_col
-                })
-                
-                # 유효한 행만 필터링
-                # - 항목명이 비어있지 않고
-                # - 금액이 숫자인 행만 선택
-                year_df = year_df[
-                    year_df['항목명'].str.len() > 0 & 
-                    year_df['금액'].notna()
-                ].copy()
-                
-                if len(year_df) > 0:
-                    year_dfs[year] = year_df
+                for col_idx, year in year_mapping.items():
+                    if col_idx >= len(df.columns):
+                        logging.warning(f"Column index {col_idx} not found in sheet {sheet_name}")
+                        continue
+                    
+                    # 해당 연도의 금액 데이터 추출
+                    amount_col = df.iloc[:, col_idx]
+                    
+                    # 금액 전처리
+                    amount_col = (amount_col
+                               .astype(str)
+                               .str.replace(',', '')  # 쉼표 제거
+                               .str.replace('−', '-')  # 전각 마이너스를 하이픈으로
+                               .str.replace('(', '-')  # 괄호로 표시된 음수 처리
+                               .str.replace(')', '')
+                               .str.strip())
+                    
+                    # 숫자로 변환 (빈 문자열은 NaN으로)
+                    amount_col = pd.to_numeric(amount_col, errors='coerce')
+                    
+                    # 연도별 DataFrame 생성
+                    year_df = pd.DataFrame({
+                        '항목명': item_col,
+                        '금액': amount_col
+                    })
+                    
+                    # 유효한 행만 필터링
+                    # - 항목명이 비어있지 않고
+                    # - 금액이 숫자인 행만 선택
+                    year_df = year_df[
+                        (year_df['항목명'].notna()) & 
+                        (year_df['항목명'].str.len() > 0) & 
+                        (year_df['금액'].notna())
+                    ].copy()
+                    
+                    if len(year_df) > 0:
+                        year_key = f"{year}-12-31"  # YYYY-12-31 형태로 저장
+                        year_dfs[year_key] = year_df
+                        
+                        logging.info(
+                            f"📑 Sheet [{sheet_name}] Column [{chr(66+col_idx-1)}] -> Year [{year_key}]:\n"
+                            f"✅ Total rows: {len(year_df)}\n"
+                            f"📋 Sample items (first 3): {year_df['항목명'].head(3).tolist()}\n"
+                            f"💰 Sample amounts (first 3): {year_df['금액'].head(3).apply(lambda x: f'{x:,.0f}' if pd.notna(x) else 'N/A').tolist()}"
+                        )
+            
+            else:
+                # 기존 로직: 다른 시트들은 첫 행에서 연도를 추출
+                for col_idx in range(1, len(df.columns)):
+                    # 첫 행에서 연도 추출 시도
+                    year_value = str(df.iloc[0, col_idx]).strip()
+                    if not year_value or not year_value.isdigit() or len(year_value) != 4:
+                        continue
+                    
+                    # 해당 연도의 금액 데이터 추출
+                    amount_col = df.iloc[:, col_idx]
+                    
+                    # 금액 전처리
+                    amount_col = (amount_col
+                               .astype(str)
+                               .str.replace(',', '')  # 쉼표 제거
+                               .str.replace('−', '-')  # 전각 마이너스를 하이픈으로
+                               .str.replace('(', '-')  # 괄호로 표시된 음수 처리
+                               .str.replace(')', '')
+                               .str.strip())
+                    
+                    # 숫자로 변환 (빈 문자열은 NaN으로)
+                    amount_col = pd.to_numeric(amount_col, errors='coerce')
+                    
+                    # 연도별 DataFrame 생성
+                    year_df = pd.DataFrame({
+                        '항목명': item_col,
+                        '금액': amount_col
+                    })
+                    
+                    # 유효한 행만 필터링
+                    year_df = year_df[
+                        (year_df['항목명'].notna()) & 
+                        (year_df['항목명'].str.len() > 0) & 
+                        (year_df['금액'].notna())
+                    ].copy()
+                    
+                    if len(year_df) > 0:
+                        year_key = f"{year_value}-12-31"  # YYYY-12-31 형태로 저장
+                        year_dfs[year_key] = year_df
             
             if not year_dfs:
                 raise ValueError("No valid year data found after preprocessing")
             
             # 전처리 결과 로깅
-            for year, df in year_dfs.items():
-                logging.info(
-                    f"\n📑 Sheet [{sheet_name}] Year [{year}] Preprocessing Result:\n"
-                    f"✅ Total rows: {len(df)}\n"
-                    f"📋 Sample items (first 5):\n{df['항목명'].head().tolist()}\n"
-                    f"💰 Sample amounts (first 5):\n{df['금액'].head().apply(lambda x: f'{x:,.0f}').tolist()}"
-                )
+            logging.info(
+                f"\n📑 Sheet [{sheet_name}] Preprocessing Summary:\n"
+                f"✅ Total years processed: {len(year_dfs)}\n"
+                f"📅 Years: {list(year_dfs.keys())}"
+            )
             
             return year_dfs
             
